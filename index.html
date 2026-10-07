@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0d13">
 <title>GRAVITON — Gravity Loops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,8 +20,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
   -webkit-touch-callout:none}
 canvas#cv{position:fixed;inset:0;display:block;touch-action:none;cursor:crosshair}
 .hidden{display:none!important}
-
-#hud{position:fixed;top:0;left:0;right:0;padding:16px 18px;display:flex;
+#hud{position:fixed;top:0;left:0;right:0;padding:calc(16px + env(safe-area-inset-top)) 18px 16px;display:flex;
   justify-content:space-between;align-items:flex-start;pointer-events:none;z-index:5}
 #score{font-family:'Unbounded';font-weight:800;font-size:34px;line-height:1;letter-spacing:.5px}
 #depth{font-size:12px;color:var(--dim);letter-spacing:2px;margin-top:4px}
@@ -194,6 +192,25 @@ body.touch #pulseBtn:not(.ready){opacity:.5;transform:scale(1);pointer-events:au
 #menuFoot button{background:none;border:none;color:#5c6572;font-family:'Rubik';font-size:11px;letter-spacing:1px;cursor:pointer}
 #menuFoot button:hover{color:var(--txt)}
 #ver{font-size:10px;color:#3a424d;letter-spacing:1px}
+
+/* ---------- LOADER ---------- */
+#loader{background:var(--bg);backdrop-filter:none;z-index:40;flex-direction:column;
+  transition:opacity .55s ease}
+#loader.off{opacity:0;pointer-events:none}
+#loadBar{width:min(240px,62vw);height:4px;background:rgba(255,255,255,.1);
+  border-radius:2px;overflow:hidden;margin-top:20px}
+#loadBar i{display:block;height:100%;width:0;background:var(--amber);
+  border-radius:2px;transition:width .35s ease}
+#loadPct{font-family:'Unbounded';font-weight:600;font-size:11px;letter-spacing:3px;
+  color:var(--dim);margin-top:12px}
+.lspin{margin-top:24px;width:26px;height:26px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.12);border-top-color:var(--amber);
+  animation:lrot .8s linear infinite}
+@keyframes lrot{to{transform:rotate(360deg)}}
+#loadTip{margin-top:24px;font-size:12px;color:var(--dim);line-height:1.6;
+  max-width:82vw;text-align:center}
+#loadTip b{color:var(--amber);font-weight:500}
+
 @media (max-height:700px){
   .panel{padding:16px 18px 14px}
   .logo{font-size:24px}
@@ -207,90 +224,20 @@ body.touch #pulseBtn:not(.ready){opacity:.5;transform:scale(1);pointer-events:au
   .mtab{font-size:7.5px;letter-spacing:0}
   .schip b{font-size:12px}
 }
-
-/* ================= SPLASH ================= */
-#splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;background:#0a0d13;overflow:hidden;
-  transition:opacity .55s ease;user-select:none;-webkit-user-select:none;touch-action:manipulation}
-#splash::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 70% 55% at 50% 42%, rgba(110,200,255,.07), transparent 60%),
-             radial-gradient(ellipse 60% 45% at 50% 75%, rgba(255,182,72,.05), transparent 60%)}
-#splash.out{opacity:0;pointer-events:none}
-.splash-ring{position:absolute;top:50%;left:50%;width:74vmin;height:74vmin;
-  margin:-37vmin 0 0 -37vmin;border:1px dashed rgba(255,182,72,.18);border-radius:50%;
-  animation:spin 14s linear infinite}
-.splash-ring::after{content:'';position:absolute;top:-4px;left:50%;width:8px;height:8px;
-  border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber)}
-@keyframes spin{to{transform:rotate(360deg)}}
-.splash-logo{position:relative;font-family:'Unbounded';font-weight:800;
-  font-size:clamp(30px,9vw,58px);letter-spacing:clamp(2px,1.4vw,7px);color:var(--txt);
-  text-shadow:2px 0 0 rgba(255,94,122,.28),-2px 0 0 rgba(77,184,255,.28);
-  animation:spIn .7s ease both}
-.splash-logo .em{color:var(--amber)}
-.splash-sub{position:relative;color:var(--dim);font-size:clamp(9px,2.2vw,12px);
-  letter-spacing:clamp(4px,2vw,8px);text-transform:uppercase;margin-top:12px;
-  animation:spIn .7s .15s ease both}
-.splash-bar{position:relative;width:min(250px,60vw);height:4px;margin-top:8vmin;
-  border-radius:2px;background:rgba(255,255,255,.1);overflow:hidden;
-  animation:spIn .6s .3s ease both}
-.splash-bar i{display:block;height:100%;width:0;border-radius:2px;
-  background:linear-gradient(90deg,var(--amber),#ffd27a);transition:width .15s ease}
-.splash-tip{position:relative;margin-top:16px;min-height:18px;font-size:12px;
-  color:var(--dim);letter-spacing:.4px;text-align:center;max-width:80vw;padding:0 16px;
-  animation:spIn .6s .45s ease both}
-.splash-tap{position:relative;margin-top:34px;font-family:'Unbounded';font-weight:600;
-  font-size:13px;letter-spacing:4px;color:var(--amber);opacity:0;transform:translateY(8px);
-  transition:opacity .3s,transform .3s}
-.splash-tap.on{opacity:1;transform:none;animation:tapPulse 1.4s ease-in-out infinite}
-@keyframes spIn{from{opacity:0;transform:translateY(16px)}}
-@keyframes tapPulse{50%{opacity:.45}}
-
-/* ============ МОБІЛЬНІ / ПЛАНШЕТИ ============ */
-html,body{height:100dvh;overscroll-behavior:none}
-button{touch-action:manipulation}
-#hud{padding:calc(12px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right))
-     0 calc(14px + env(safe-area-inset-left))}
-#tut{bottom:calc(15% + env(safe-area-inset-bottom))}
-#toast{top:calc(22% + env(safe-area-inset-top))}
-@media (pointer:coarse){
-  .mtab{padding:11px 1px;font-size:9.5px}
-  .arr{width:44px;height:44px}
-  .cardAct{padding:9px 16px}
-  .btn{padding:15px 34px}
-  .btn.ghost,.btn.revive{padding:14px 28px}
-  .iconbtn{width:42px;height:42px}
-  .chip{padding:8px 12px}
-  .pack{padding:15px 8px 14px}
-}
-@media (max-width:480px){
-  #score{font-size:26px}
-  #pulseBar{width:104px}
-  .card{width:min(46vw,168px)}
-  .btn.play{max-width:280px}
-  #revBtns{flex-direction:column;align-items:center}
-  #revBtns .btn{width:100%;max-width:280px;margin-top:0!important}
-  #caseStage{height:190px}
-  #revName{font-size:21px}
-}
-@media (min-width:768px) and (pointer:coarse){
-  .panel{width:min(520px,92vw)}
-  #score{font-size:38px}
-  .btn.play{max-width:360px}
-}
-@media (max-height:560px) and (orientation:landscape){
-  #hud{padding:8px 14px 0}
-  #score{font-size:22px}
-  .panel{padding:12px 16px 10px;max-height:96vh}
-  .logo{font-size:20px}
-  .tabbody{min-height:150px}
-  #caseStage{height:min(150px,32vh)}
-  .splash-bar{margin-top:4vh}
-  .splash-tap{margin-top:18px}
-}
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
+
+<!-- LOADER -->
+<div id="loader" class="overlay">
+  <div class="logo" id="loadLogo"></div>
+  <div class="sub">gravity loops</div>
+  <div id="loadBar"><i></i></div>
+  <div id="loadPct">0%</div>
+  <div class="lspin"></div>
+  <div id="loadTip"></div>
+</div>
 
 <div id="hud" class="hidden">
   <div class="hud-left">
@@ -326,16 +273,6 @@ button{touch-action:manipulation}
 
 <div id="tut"></div>
 <div id="toast"></div>
-
-<!-- SPLASH / LAUNCH SCREEN -->
-<div id="splash">
-  <div class="splash-ring"></div>
-  <div class="splash-logo">GRAVI<span class="em">TON</span></div>
-  <div class="splash-sub">gravity loops</div>
-  <div class="splash-bar"><i id="splashFill"></i></div>
-  <div class="splash-tip" id="splashTip"></div>
-  <div class="splash-tap" id="splashTap">TAP TO LAUNCH</div>
-</div>
 
 <!-- MENU -->
 <div id="menu" class="overlay">
@@ -441,7 +378,7 @@ button{touch-action:manipulation}
     <div id="menuFoot">
       <button id="btnSound2">Sound: on</button>
       <button id="btnWipe">Reset progress</button>
-      <span id="ver">v4.6</span>
+      <span id="ver">v4.5</span>
     </div>
   </div>
 </div>
@@ -506,11 +443,8 @@ button{touch-action:manipulation}
 <script>
 'use strict';
 /* ============================================================
-   GRAVITON v4.6 — ART STYLES
-   9 стилів рендерингу (classic/anime/cartoon/pixel/realism/
-   painted/ink/neon/vhs), вибиваються з паків (22%),
-   пост-обробка кадру в реальному часі + превью і дроп-анімація.
-   ============================================================ */
+   GRAVITON v4.5 — ART STYLES
+============================================================ */
 
 window.addEventListener('error', e=>{
   let el = document.getElementById('errTrap');
@@ -537,23 +471,20 @@ function buildVign(){
 }
 function resize(){
   DPR = Math.min(devicePixelRatio || 1, 2);
-  if(IS_TOUCH && Math.min(innerWidth, innerHeight) >= 700) DPR = Math.min(DPR, 1.6); /* планшети */
   W = innerWidth; H = innerHeight;
   cv.width = W * DPR; cv.height = H * DPR;
   cx.setTransform(DPR, 0, 0, DPR, 0, 0);
   buildVign();
   if(state==='menu') demoInit();
   moveInd();
-  if(!$('case').classList.contains('hidden')) fitCaseStage();
 }
 addEventListener('resize', resize);
-addEventListener('orientationchange', ()=> setTimeout(resize, 250));
 
 const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
 if(IS_TOUCH) document.body.classList.add('touch');
 function vib(ms){ try{ if(IS_TOUCH && navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
 
-const $    = id => document.getElementById(id);
+const $ = id => document.getElementById(id);
 const clamp = (v,a,b)=> v<a?a : v>b?b : v;
 const lerp  = (a,b,t)=> a+(b-a)*t;
 const rnd   = (a=1,b)=> b===undefined ? Math.random()*a : a+Math.random()*(b-a);
@@ -561,7 +492,7 @@ const mod   = (a,m)=> ((a % m) + m) % m;
 const TAU = Math.PI*2;
 const hexA = (hex,a)=>{
   const n = parseInt(hex.slice(1),16);
-  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+  return `rgba(${n >> 16&255},${n>>8&255},${n&255},${a})`;
 };
 function rr2(g,x,y,w,h,r){
   g.beginPath();
@@ -573,48 +504,48 @@ function rr2(g,x,y,w,h,r){
 
 /* ============================================================
    1) GAME DATA
-   ============================================================ */
+============================================================ */
 const RARITY = {
-  common:    { name:'Common',    c:'#9aa7b4', dup:15  },
-  rare:      { name:'Rare',      c:'#4db8ff', dup:40  },
+  common:    { name:'Common',    c:'#9aa7b4', dup:15 },
+  rare:      { name:'Rare',      c:'#4db8ff', dup:40 },
   epic:      { name:'Epic',      c:'#b06bff', dup:110 },
   legendary: { name:'Legendary', c:'#ffb648', dup:320 },
   mythic:    { name:'Mythic',    c:'#ff5e7a', dup:900 },
 };
 const SKINS = [
-  { id:'amber', name:'Amber',       r:'common',    core:'#ffe9c4', trail:'#ffb648' },
-  { id:'ash',   name:'Ash',         r:'common',    core:'#cfd4da', trail:'#8d99a6' },
-  { id:'rust',  name:'Rust',        r:'common',    core:'#ffd9b8', trail:'#c96f3b' },
-  { id:'sand',  name:'Sandstone',   r:'common',    core:'#f2e2c4', trail:'#d9b06a' },
-  { id:'mint',  name:'Mint',        r:'rare',      core:'#d8fff0', trail:'#5ee6b0' },
-  { id:'ice',   name:'Ice',         r:'rare',      core:'#eaf7ff', trail:'#9fd8ff', fx:'frost' },
-  { id:'ocean', name:'Ocean',       r:'rare',      core:'#cfeaff', trail:'#3d8bff' },
-  { id:'neon',  name:'Neon',        r:'rare',      core:'#eafff2', trail:'#39ff88' },
-  { id:'cobalt',name:'Cobalt',      r:'rare',      core:'#d6e4ff', trail:'#4d7dff' },
-  { id:'lumen', name:'Lumen',       r:'rare',      core:'#fffbe0', trail:'#ffe98a', fx:'sparkle', pal:['#fff6c9','#ffffff'] },
-  { id:'magma', name:'Magma',       r:'epic',      core:'#ffe0cd', trail:'#ff7a45', fx:'ember' },
-  { id:'toxin', name:'Toxin',       r:'epic',      core:'#e8ffd6', trail:'#7dff4d', fx:'bubble' },
-  { id:'rose',  name:'Rose',        r:'epic',      core:'#ffe0ec', trail:'#ff6fa5' },
-  { id:'quant', name:'Quantum',     r:'epic',      core:'#f2eaff', trail:'#b06bff', fx:'flicker' },
-  { id:'voltage',name:'Voltage',    r:'epic',      core:'#fffbdc', trail:'#ffe14d', fx:'electric' },
-  { id:'crimson',name:'Crimson',    r:'epic',      core:'#ffd9d9', trail:'#ff4d5e', fx:'ember', pal:['#ff4d5e','#ff8d99','#ff6f3c'] },
-  { id:'spectre',name:'Spectre',    r:'epic',      core:'#e8fbff', trail:'#9fe8ff', fx:'flicker' },
-  { id:'gold',  name:'Gold',        r:'legendary', core:'#fff3c9', trail:'#ffd23e', fx:'sparkle' },
-  { id:'obsidian',name:'Obsidian',  r:'legendary', core:'#1c232e', trail:'#6f7d92', fx:'shadow' },
-  { id:'plasma',name:'Plasma',      r:'legendary', core:'#e6fbff', trail:'#00e5ff', fx:'electric' },
-  { id:'galaxy',name:'Galaxy',      r:'legendary', core:'#d9ccff', trail:'#8f6bff', fx:'stars' },
-  { id:'aurora',name:'Aurora',      r:'legendary', core:'#eafff4', trail:'#7dffb0', fx:'stars', pal:['#7dffb0','#b0ff7d','#7de3ff'] },
-  { id:'tsunami',name:'Tsunami',    r:'legendary', core:'#d2f4ff', trail:'#37b6ff', fx:'bubble', pal:['rgba(159,216,255,.65)','rgba(94,230,255,.6)'] },
-  { id:'umbra', name:'Umbra',       r:'legendary', core:'#241a38', trail:'#7a5fb0', fx:'shadow', pal:['#4a3b63','#3a2f52'] },
-  { id:'prism', name:'Prism',       r:'mythic',    core:'#ffffff', trail:'prism',  fx:'rainbow' },
-  { id:'singularity',name:'Singularity', r:'mythic', core:'#15101f', trail:'#b48cff', fx:'void' },
-  { id:'supernova',name:'Supernova',r:'mythic',    core:'#fff6e0', trail:'#ff9d3c', fx:'nova' },
-  { id:'eclipse',name:'Eclipse',    r:'mythic',    core:'#1a1208', trail:'#ffb648', fx:'void', pal:['#ffd27a','#ff9d3c'] },
-  { id:'borealis',name:'Borealis',  r:'mythic',    core:'#eafff8', trail:'prism',  fx:'rainbow' },
-  { id:'bigbang',name:'Big Bang',   r:'mythic',    core:'#ffffff', trail:'#bfe4ff', fx:'nova', pal:['#ffffff','#bfe4ff','#ffd23e'] },
+  { id:'amber',  name:'Amber',       r:'common',    core:'#ffe9c4', trail:'#ffb648' },
+  { id:'ash',    name:'Ash',         r:'common',    core:'#cfd4da', trail:'#8d99a6' },
+  { id:'rust',   name:'Rust',        r:'common',    core:'#ffd9b8', trail:'#c96f3b' },
+  { id:'sand',   name:'Sandstone',   r:'common',    core:'#f2e2c4', trail:'#d9b06a' },
+  { id:'mint',   name:'Mint',        r:'rare',      core:'#d8fff0', trail:'#5ee6b0' },
+  { id:'ice',    name:'Ice',         r:'rare',      core:'#eaf7ff', trail:'#9fd8ff', fx:'frost' },
+  { id:'ocean',  name:'Ocean',       r:'rare',      core:'#cfeaff', trail:'#3d8bff' },
+  { id:'neon',   name:'Neon',        r:'rare',      core:'#eafff2', trail:'#39ff88' },
+  { id:'cobalt', name:'Cobalt',      r:'rare',      core:'#d6e4ff', trail:'#4d7dff' },
+  { id:'lumen',  name:'Lumen',       r:'rare',      core:'#fffbe0', trail:'#ffe98a', fx:'sparkle', pal:['#fff6c9','#ffffff'] },
+  { id:'magma',  name:'Magma',       r:'epic',      core:'#ffe0cd', trail:'#ff7a45', fx:'ember' },
+  { id:'toxin',  name:'Toxin',       r:'epic',      core:'#e8ffd6', trail:'#7dff4d', fx:'bubble' },
+  { id:'rose',   name:'Rose',        r:'epic',      core:'#ffe0ec', trail:'#ff6fa5' },
+  { id:'quant',  name:'Quantum',     r:'epic',      core:'#f2eaff', trail:'#b06bff', fx:'flicker' },
+  { id:'voltage',name:'Voltage',     r:'epic',      core:'#fffbdc', trail:'#ffe14d', fx:'electric' },
+  { id:'crimson',name:'Crimson',     r:'epic',      core:'#ffd9d9', trail:'#ff4d5e', fx:'ember', pal:['#ff4d5e','#ff8d99','#ff6f3c'] },
+  { id:'spectre',name:'Spectre',     r:'epic',      core:'#e8fbff', trail:'#9fe8ff', fx:'flicker' },
+  { id:'gold',   name:'Gold',        r:'legendary', core:'#fff3c9', trail:'#ffd23e', fx:'sparkle' },
+  { id:'obsidian',name:'Obsidian',   r:'legendary', core:'#1c232e', trail:'#6f7d92', fx:'shadow' },
+  { id:'plasma', name:'Plasma',      r:'legendary', core:'#e6fbff', trail:'#00e5ff', fx:'electric' },
+  { id:'galaxy', name:'Galaxy',      r:'legendary', core:'#d9ccff', trail:'#8f6bff', fx:'stars' },
+  { id:'aurora', name:'Aurora',      r:'legendary', core:'#eafff4', trail:'#7dffb0', fx:'stars', pal:['#7dffb0','#b0ff7d','#7de3ff'] },
+  { id:'tsunami',name:'Tsunami',     r:'legendary', core:'#d2f4ff', trail:'#37b6ff', fx:'bubble', pal:['rgba(159,216,255,.65)','rgba(94,230,255,.6)'] },
+  { id:'umbra',  name:'Umbra',       r:'legendary', core:'#241a38', trail:'#7a5fb0', fx:'shadow', pal:['#4a3b63','#3a2f52'] },
+  { id:'prism',  name:'Prism',       r:'mythic',    core:'#ffffff', trail:'prism', fx:'rainbow' },
+  { id:'singularity', name:'Singularity', r:'mythic', core:'#15101f', trail:'#b48cff', fx:'void' },
+  { id:'supernova', name:'Supernova', r:'mythic', core:'#fff6e0', trail:'#ff9d3c', fx:'nova' },
+  { id:'eclipse',   name:'Eclipse',   r:'mythic', core:'#1a1208', trail:'#ffb648', fx:'void', pal:['#ffd27a','#ff9d3c'] },
+  { id:'borealis',  name:'Borealis',  r:'mythic', core:'#eafff8', trail:'prism', fx:'rainbow' },
+  { id:'bigbang',   name:'Big Bang',  r:'mythic', core:'#ffffff', trail:'#bfe4ff', fx:'nova', pal:['#ffffff','#bfe4ff','#ffd23e'] },
 ];
 
-/* ---- ART STYLES (дропаються з паків) ---- */
+/* ---- ART STYLES ---- */
 const STYLES = [
   { id:'classic', name:'Classic',  r:'common' },
   { id:'anime',   name:'Anime',    r:'rare' },
@@ -629,22 +560,23 @@ const STYLES = [
 const STMAP = {}; STYLES.forEach(s=>STMAP[s.id]=s);
 
 const PACKS = {
-  std:  { name:'Standard Pack', cost:80,  styleChance:0.22, w:{ common:.46, rare:.29, epic:.16, legendary:.07, mythic:.02 } },
-  prem: { name:'Premium Pack',  cost:250, styleChance:0.22, w:{ rare:.40, epic:.33, legendary:.21, mythic:.06 } },
+  std:  { name:'Standard Pack', cost:80,  styleChance:0.22,
+          w:{ common:.46, rare:.29, epic:.16, legendary:.07, mythic:.02 } },
+  prem: { name:'Premium Pack',  cost:250, styleChance:0.22,
+          w:{ rare:.40, epic:.33, legendary:.21, mythic:.06 } },
 };
 const PTHEMES = [
   { id:'classic',  name:'Classic',  price:0,   body:'#151f29', st:[150,190,185], cr:'rgba(255,255,255,.05)' },
-  { id:'magma',    name:'Magmatic', price:120, body:'#1d1109', st:[255,122,69],  cr:'rgba(255,122,69,.16)', glow:'rgba(255,122,69,.12)' },
+  { id:'magma',    name:'Magmatic', price:120, body:'#1d1109', st:[255,122,69], cr:'rgba(255,122,69,.16)', glow:'rgba(255,122,69,.12)' },
   { id:'glacier',  name:'Glacier',  price:120, body:'#0e1a24', st:[159,216,255], cr:'rgba(210,240,255,.12)', ring:true },
-  { id:'emerald',  name:'Emerald',  price:180, body:'#0d1a13', st:[94,230,176],  cr:'rgba(140,255,200,.10)' },
-  { id:'scarlet',  name:'Scarlet',  price:180, body:'#1c0e12', st:[255,94,122],  cr:'rgba(255,94,122,.14)' },
+  { id:'emerald',  name:'Emerald',  price:180, body:'#0d1a13', st:[94,230,176], cr:'rgba(140,255,200,.10)' },
+  { id:'scarlet',  name:'Scarlet',  price:180, body:'#1c0e12', st:[255,94,122], cr:'rgba(255,94,122,.14)' },
   { id:'amethyst', name:'Amethyst', price:240, body:'#151024', st:[176,107,255], cr:'rgba(200,160,255,.12)', ring:true },
   { id:'dune',     name:'Dune',     price:240, body:'#1d160d', st:[225,180,120], cr:'rgba(255,220,160,.12)' },
   { id:'graphite', name:'Graphite', price:320, body:'#14161a', st:[200,206,214], cr:'rgba(255,255,255,.07)' },
   { id:'polaris',  name:'Polaris',  price:400, body:'#0c1a1d', st:[110,255,214], cr:'rgba(110,255,214,.14)', glow:'rgba(110,200,255,.10)', ring:true },
 ];
 const PTMAP = {}; PTHEMES.forEach(t=>PTMAP[t.id]=t);
-
 const ZONES = [
   { at:0,    name:'QUIET SECTOR',   bg:[10,13,19], neb:['#123a4a','#3a1f52','#0f2f3a'] },
   { at:800,  name:'ASTEROID BELT',  bg:[15,11,9],  neb:['#4a2410','#123a4a','#522a18'] },
@@ -668,15 +600,16 @@ const NEB = ZONES.map(z=>{
   }
   return c;
 });
-const RANKS = [[0,'Trainee'],[400,'Pilot'],[1200,'Navigator'],[2500,'Astronaut'],[5000,'Commander'],[10000,'Legend']];
+const RANKS =
+  [[0,'Trainee'],[400,'Pilot'],[1200,'Navigator'],[2500,'Astronaut'],[5000,'Commander'],[10000,'Legend']];
 const MISSIONS = [
-  { id:'crys',   key:'crystalRun', rw:60, ns:[25,40,60],      txt:n=>`Collect ${n} crystals in one run` },
-  { id:'combo',  key:'maxCombo',   rw:80, ns:[5,7,9],         txt:n=>`Reach a ×${n} combo` },
-  { id:'height', key:'depthMax',   rw:70, ns:[800,1500,2500], txt:n=>`Climb above ${n} m in one run` },
-  { id:'graze',  key:'grazes',     rw:60, ns:[3,5,8],         txt:n=>`Make ${n} close calls in one run` },
-  { id:'flyby',  key:'flybys',     rw:60, ns:[5,9,14],        txt:n=>`Perform ${n} gravity flybys in one run` },
-  { id:'pulse',  key:'pulseKills', rw:80, ns:[4,7,10],        txt:n=>`Destroy ${n} targets with a pulse in one run` },
-  { id:'rocks',  key:'rockKills',  rw:70, ns:[2,4,6],         txt:n=>`Smash ${n} asteroids with a pulse in one run` },
+  { id:'crys',   key:'crystalRun', rw:60, ns:[25,40,60],       txt:n=>`Collect ${n} crystals in one run` },
+  { id:'combo',  key:'maxCombo',   rw:80, ns:[5,7,9],          txt:n=>`Reach a ×${n} combo` },
+  { id:'height', key:'depthMax',   rw:70, ns:[800,1500,2500],  txt:n=>`Climb above ${n} m in one run` },
+  { id:'graze',  key:'grazes',     rw:60, ns:[3,5,8],          txt:n=>`Make ${n} close calls in one run` },
+  { id:'flyby',  key:'flybys',     rw:60, ns:[5,9,14],         txt:n=>`Perform ${n} gravity flybys in one run` },
+  { id:'pulse',  key:'pulseKills', rw:80, ns:[4,7,10],         txt:n=>`Destroy ${n} targets with a pulse in one run` },
+  { id:'rocks',  key:'rockKills',  rw:70, ns:[2,4,6],          txt:n=>`Smash ${n} asteroids with a pulse in one run` },
 ];
 function genMission(excl){
   const pool = MISSIONS.filter(m=> !excl.includes(m.id));
@@ -686,7 +619,7 @@ function genMission(excl){
 
 /* ============================================================
    2) SAVE
-   ============================================================ */
+============================================================ */
 const CG = { ready:false, playing:false };
 const SAVE_KEY = 'graviton_save_v5';
 const SAVE_KEYS_OLD = ['graviton_save_v4','graviton_save_v3'];
@@ -741,13 +674,15 @@ async function cgInit(){
   }catch(e){ CG.ready = false; }
   updateAdButtons();
 }
-addEventListener('load', cgInit);
+let cgInitPromise = null;                                          // FIX (loader)
+addEventListener('load', ()=>{ cgInitPromise = cgInit(); });       // FIX (loader)
 function cgStart(){ if(!CG.ready||CG.playing) return; try{ window.CrazyGames.SDK.game.gameplayStart(); CG.playing=true; }catch(e){} }
 function cgStop(){ if(!CG.ready||!CG.playing) return; try{ window.CrazyGames.SDK.game.gameplayStop(); CG.playing=false; }catch(e){} }
 function cgHappy(){ if(!CG.ready) return; try{ window.CrazyGames.SDK.game.happytime(); }catch(e){} }
 
 let save = defSave();
 (function(){ const s = readStore(k=>localStorage.getItem(k)); if(s) Object.assign(save, s); normalizeSave(); })();
+
 let skinIdx  = Math.max(0, SKINS.findIndex(s=>s.id===save.skin));
 let pIdx     = Math.max(0, PTHEMES.findIndex(t=>t.id===save.pskin));
 let styleIdx = Math.max(0, STYLES.findIndex(s=>s.id===save.style));
@@ -795,7 +730,7 @@ function rankOf(best){
 
 /* ============================================================
    3) RENDER STYLES — пост-обробка кадру
-   ============================================================ */
+============================================================ */
 const blendOK = {};
 function blendSupport(g, m){
   if(!(m in blendOK)){
@@ -834,7 +769,7 @@ const tmpB = document.createElement('canvas'), tmpBx = tmpB.getContext('2d');
 const tmpC = document.createElement('canvas'), tmpCx = tmpC.getContext('2d');
 
 function softBlur(g, cnv, k){
-  tmpA.width  = Math.max(1, Math.round(cnv.width*k));
+  tmpA.width = Math.max(1, Math.round(cnv.width*k));
   tmpA.height = Math.max(1, Math.round(cnv.height*k));
   tmpAx.imageSmoothingEnabled = true;
   tmpAx.clearRect(0,0,tmpA.width,tmpA.height);
@@ -870,7 +805,7 @@ function styleCanvas(cnv, g, id){
   const w = cnv.width, h = cnv.height;
   const isMain = (cnv === cv);
   let snap = null;
-  if(!isMain){ /* зберегти альфу для маленьких канвасів */
+  if(!isMain){
     tmpC.width = w; tmpC.height = h;
     tmpCx.clearRect(0,0,w,h);
     tmpCx.drawImage(cnv,0,0);
@@ -879,7 +814,7 @@ function styleCanvas(cnv, g, id){
   switch(id){
     case 'pixel': {
       const f = isMain ? (W<520 ? 3 : 4) : 2;
-      tmpB.width  = Math.max(1, Math.round(w/f));
+      tmpB.width = Math.max(1, Math.round(w/f));
       tmpB.height = Math.max(1, Math.round(h/f));
       tmpBx.imageSmoothingEnabled = true;
       tmpBx.clearRect(0,0,tmpB.width,tmpB.height);
@@ -956,7 +891,7 @@ function styleCanvas(cnv, g, id){
       break;
     }
   }
-  if(snap){ /* відновити прозорість */
+  if(snap){
     g.save(); g.globalCompositeOperation = 'destination-in';
     g.drawImage(snap,0,0); g.restore();
   }
@@ -964,7 +899,7 @@ function styleCanvas(cnv, g, id){
 
 /* ============================================================
    4) AUDIO
-   ============================================================ */
+============================================================ */
 let AC=null, master=null, padNodes=null;
 function audioInit(){
   if(AC) { if(AC.state==='suspended') AC.resume(); return; }
@@ -1031,17 +966,19 @@ const sfxBoom   = ()=> { noiseBurst(0.5, 900, 90, 0.4, 'lowpass'); tone(70,0.5,'
 const sfxPulse  = ()=> { tone(200,0.4,'sine',0.25,880); noiseBurst(0.35,300,2200,0.12); };
 const sfxMineKil= ()=> noiseBurst(0.25, 1200, 200, 0.22, 'lowpass');
 const sfxRockKil= ()=> { noiseBurst(0.3, 700, 120, 0.28, 'lowpass'); tone(90,0.25,'sine',0.18,50); };
-const sfxBuy = ()=> { tone(523,0.15,'triangle',0.15);
+const sfxBuy    = ()=> { tone(523,0.15,'triangle',0.15);
   setTimeout(()=>tone(659,0.15,'triangle',0.15),90);
   setTimeout(()=>tone(784,0.25,'triangle',0.15),180); };
-const sfxTick  = ()=> tone(rnd(1400,1700), 0.03, 'square', 0.035);
-const sfxOpen  = ()=> { tone(160,0.25,'sine',0.22,80); noiseBurst(0.25,500,2500,0.08); };
-const sfxShield= ()=> { tone(392,0.3,'sine',0.2); setTimeout(()=>tone(523,0.35,'sine',0.18),100); };
-const sfxBreak = ()=> { noiseBurst(0.3,2000,300,0.25,'lowpass'); tone(300,0.25,'sine',0.2,120); };
-const sfxFly   = ()=> noiseBurst(0.18, 500, 3200, 0.1);
-const sfxZone  = ()=> { tone(523,0.4,'triangle',0.14); setTimeout(()=>tone(784,0.5,'triangle',0.12),140); };
-const sfxAlarm = ()=> { tone(220,0.3,'square',0.12,180); setTimeout(()=>tone(220,0.3,'square',0.12,180),380); };
-const sfxLaser = ()=> { tone(1800,0.12,'sawtooth',0.05,900); };
+const sfxTick   = ()=> tone(rnd(1400,1700), 0.03, 'square', 0.035);
+const sfxOpen   = ()=> { tone(160,0.25,'sine',0.22,80); noiseBurst(0.25,500,2500,0.08); };
+const sfxShield = ()=> { tone(392,0.3,'sine',0.2); setTimeout(()=>tone(523,0.35,'sine',0.18),100); };
+const sfxBreak  = ()=> { noiseBurst(0.3,2000,300,0.25,'lowpass'); tone(300,0.25,'sine',0.2,120); };
+const sfxFly    = ()=> noiseBurst(0.18, 500, 3200, 0.1);
+const sfxZone   = ()=> { tone(523,0.4,'triangle',0.14);
+  setTimeout(()=>tone(784,0.5,'triangle',0.12),140); };
+const sfxAlarm  = ()=> { tone(220,0.3,'square',0.12,180);
+  setTimeout(()=>tone(220,0.3,'square',0.12,180),380); };
+const sfxLaser  = ()=> { tone(1800,0.12,'sawtooth',0.05,900); };
 const sfxRevive = ()=> [330,415,494,660].forEach((f,i)=>setTimeout(()=>tone(f,0.3,'triangle',0.15), i*90));
 function sfxReveal(r){
   const base = { common:392, rare:523.25, epic:659.25, legendary:783.99, mythic:987.77 }[r];
@@ -1052,7 +989,7 @@ function sfxReveal(r){
 
 /* ============================================================
    5) GAME STATE
-   ============================================================ */
+============================================================ */
 let state = 'menu';
 let camY = 0, perf = 0, lastT = 0;
 let player, planets, mines, rocks, holes, lasers, turrets, bolts, meteors, crystals, pickups, parts, floats, waves, trail;
@@ -1101,6 +1038,7 @@ function spawnBand(by){
   const diff = diffAt(by);
   const zn = zoneAtY(by);
   const mkPlanet = (x,y,r,gold)=>({ x, y, r, spin:rnd(TAU), gold:!!gold, fly:false });
+
   const p = mkPlanet(rnd(80, W-80), by, rnd(26, 46));
   if(zn>=1 && !p.gold && Math.random()<0.22)
     p.ring = { t:rnd(-0.35,0.35), r1:p.r*1.55, r2:p.r*2.05 };
@@ -1154,6 +1092,7 @@ function spawnBand(by){
       rocks.push({ x:rnd(60,W-60), y:by-rnd(-40,200), vx:rnd(-25,25), vy:rnd(-20,15), r, verts, rot:rnd(TAU), vr:rnd(-1,1) });
     }
   }
+
   if(zn>=1 && Math.random() < 0.10 + diff*0.5){
     const k = 1 + ((diff>0.55 && Math.random()<0.5)?1:0);
     for(let i=0;i<k;i++){
@@ -1219,6 +1158,7 @@ function minePos(m){
   if(m.type==='patrol') return [ mod(m.x0 + Math.sin(perf*m.spd + m.ph)*m.amp, W), m.y ];
   return [ m.x, m.y ];
 }
+
 function nearestPlanet(x, y, maxD){
   let best=null, bd=maxD;
   for(const p of planets){
@@ -1263,6 +1203,7 @@ function tryAttach(){
   const p = nearestPlanet(player.x, player.y, 130);
   if(p && !player.orbit) attachTo(p, false);
 }
+
 function firePulse(){
   if(state!=='playing' || charge < 100) return;
   charge = 0;
@@ -1301,7 +1242,7 @@ function emitFx(d){
     case 'ember':
       if(Math.random()<d*26){ const pp = pal||['#ff7a45','#ffb648','#ff5e3a'];
         parts.push({ x:pl.x+rnd(-5,5), y:pl.y+rnd(-5,5), vx:rnd(-25,25), vy:rnd(-40,-5), g:130,
-          life:rnd(.4,.8), max:.8, r:rnd(1.2,2.4), c:pick(pp) }); }
+        life:rnd(.4,.8), max:.8, r:rnd(1.2,2.4), c:pick(pp) }); }
       break;
     case 'bubble':
       if(Math.random()<d*14) parts.push({ x:pl.x+rnd(-8,8), y:pl.y+rnd(-8,8), vx:rnd(-10,10), vy:rnd(-35,-15), grow:9,
@@ -1345,7 +1286,8 @@ function emitFx(d){
         const pp = pal||['#fff6e0','#ffd23e','#ff9d3c'];
         for(let i=0;i<10;i++){
           const a = i/10*TAU + rnd(.3), v = rnd(120,210);
-          parts.push({ x:pl.x, y:pl.y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:.45, max:.45, r:rnd(1.5,2.6), c:pick(pp) });
+          parts.push({ x:pl.x, y:pl.y, vx:Math.cos(a)*v, vy:Math.sin(a)*v,
+            life:.45, max:.45, r:rnd(1.5,2.6), c:pick(pp) });
         }
       }
       break;
@@ -1442,7 +1384,7 @@ function requestRewarded(onReward, onFail){
     window.CrazyGames.SDK.ad.requestAd('rewarded', {
       adStarted:  ()=>{ if(master) master.gain.value = 0; },
       adFinished: finish,
-      adError: fail
+      adError:    fail
     });
     timer = setTimeout(fail, 60000);
   }catch(e){ fail(); }
@@ -1464,6 +1406,7 @@ function tickAdBtns(){
   c2.disabled = b2>0;
   c2.textContent = b2>0 ? `FREE PACK · ${fmtCd(b2)}` : 'FREE PACK · WATCH AD';
 }
+
  $('btnAdCrys').onclick = ()=>{
   audioInit();
   requestRewarded(()=>{
@@ -1499,7 +1442,6 @@ function checkMissions(){
   if(ch){ persist(); if(state==='menu') refreshMissions(); }
 }
 function checkDaily(){
-  if(document.getElementById('splash')) return; /* після сплеша */
   const d = new Date().toDateString();
   if(save.lastDaily !== d){
     save.lastDaily = d; save.crystals += 40; persist();
@@ -1507,8 +1449,8 @@ function checkDaily(){
   }
 }
 
-const elScore=$('score'), elDepth=$('depth'), elCombo=$('combo'), elPulse=$('pulseBar'),
-      elPulseI=elPulse.querySelector('i'), elCrys=$('crys'), elZone=$('zoneTag');
+const elScore=$('score'), elDepth = $('depth'), elCombo=$('combo'), elPulse = $('pulseBar'),
+      elPulseI=elPulse.querySelector('i'), elCrys=$('crys'), elZone = $('zoneTag');
 let lastMult=1;
 function updateHud(force){
   const score = Math.floor(depthMax) + crystalScore;
@@ -1531,6 +1473,7 @@ function updateHud(force){
 }
 
 let lastTap = 0;
+let launchLocked = false;                                          // FIX: після тап-рестарту
 const caseOpen = ()=> !$('case').classList.contains('hidden');
 cv.addEventListener('pointerdown', e=>{
   audioInit();
@@ -1541,20 +1484,22 @@ cv.addEventListener('pointerdown', e=>{
     else tryAttach();
     lastTap = now;
   } else if(state==='dead' && now - deadAt > 700){
+    launchLocked = true;                                           // FIX: блокуємо launch
+    setTimeout(()=> launchLocked = false, 600);                    // FIX: на час жесту
     startGame();
   }
 });
 addEventListener('pointerup', e=>{
   if(e.target && e.target.closest && e.target.closest('#pulseBtn,.hud-right')) return;
-  if(state==='playing' && player && player.orbit) launch();
+  if(state==='playing' && player && player.orbit && !launchLocked) launch();   // FIX
 });
-addEventListener('pointercancel', ()=>{ if(state==='playing' && player && player.orbit) launch(); });
+addEventListener('pointercancel', ()=>{ if(state==='playing' && player && player.orbit && !launchLocked) launch(); });  // FIX
 cv.addEventListener('contextmenu', e=>e.preventDefault());
 
 /* ============================================================
-   CHEAT: A → L → L → +10000 crystals (e.code — будь-яка розкладка)
+   CHEAT: A → L → L → +10000 crystals
    >>> прибрати перед релізом на CrazyGames <<<
-   ============================================================ */
+============================================================ */
 const CHEAT_LEN = 10000;
 let cheatStep = 0;
 function grantCheat(){
@@ -1566,7 +1511,6 @@ function grantCheat(){
 }
 addEventListener('keydown', e=>{
   if(e.repeat) return;
-  if(document.getElementById('splash')) return; /* сплеш активний */
   if(e.code==='KeyA') cheatStep = 1;
   else if(e.code==='KeyL' && cheatStep===1) cheatStep = 2;
   else if(e.code==='KeyL' && cheatStep===2){ cheatStep = 0; grantCheat(); }
@@ -1593,6 +1537,7 @@ function update(dt){
   if(slow>0) slow -= dt;
   const d = dt*ts;
   perf += dt;
+
   if(state!=='playing'){ updateFx(d); return; }
 
   const pl = player;
@@ -1604,7 +1549,7 @@ function update(dt){
   if(pl.orbit){
     const o = pl.orbit;
     o.tang = lerp(o.tang, 305, clamp(d*1.6,0,1));
-    o.rad  = lerp(o.rad, o.rad0, clamp(d*6,0,1));
+    o.rad  = lerp(o.rad,  o.rad0, clamp(d*6,0,1));
     o.w = clamp(o.tang/o.rad, 1.3, 3.3);
     o.ang += o.dir*o.w*d;
     pl.x = mod(o.p.x + Math.cos(o.ang)*o.rad, W);
@@ -1647,6 +1592,7 @@ function update(dt){
         break;
       }
     }
+
     for(const p of planets){
       if(p.fly) continue;
       const dd = Math.hypot(dxw(pl.x,p.x), pl.y-p.y) - p.r;
@@ -1662,9 +1608,11 @@ function update(dt){
       }
     }
   }
+
   trail.push({ x:pl.x, y:pl.y });
   if(trail.length>26) trail.shift();
   if(pl.alive) emitFx(d);
+
   depthMax = Math.max(depthMax, (startY - pl.y)/12);
   runStats.depthMax = depthMax;
 
@@ -1681,7 +1629,8 @@ function update(dt){
       const a = rnd(TAU), R = rnd(55,125);
       parts.push({ x:h.x+Math.cos(a)*R, y:h.y+Math.sin(a)*R,
         vx:Math.cos(a+Math.PI/2)*90, vy:Math.sin(a+Math.PI/2)*90,
-        life:1.1, max:1.1, r:1.4, c:Math.random()<.5?'#c9b8ff':'#8f7bd8', kind:'streak', hx:h.x, hy:h.y });
+        life:1.1, max:1.1, r:1.4, c:Math.random()<.5?'#c9b8ff':'#8f7bd8', kind:'streak',
+        hx:h.x, hy:h.y });
     }
   }
 
@@ -1968,12 +1917,14 @@ function update(dt){
     zoneBanner = { txt: ZONES[zi].name, t: 2.4 };
     sfxZone();
   }
+
   const dm = Math.floor(depthMax/500);
   if(dm>0 && dm!==(player._mile||0)){
     player._mile = dm;
     floatTxt(pl.x, pl.y-70, (dm*500)+' m', '#e9edf2', 22);
     tone(660,0.3,'triangle',0.14,990);
   }
+
   checkMissions();
 
   const look = pl.orbit ? 0 : clamp(pl.vy*0.22, -150, 40);
@@ -2003,6 +1954,7 @@ function update(dt){
   updateFx(d);
   updateHud();
 }
+
 function updateFx(d){
   for(const p of parts){
     p.life -= d;
@@ -2135,6 +2087,7 @@ function render(){
   const zm = zoneMix(cm);
   const Z0 = ZONES[zm.i], Z1 = ZONES[Math.min(zm.i+1, ZONES.length-1)];
   const bgc = mixRGB(Z0.bg, Z1.bg, zm.f);
+
   cx.fillStyle = `rgb(${bgc[0]},${bgc[1]},${bgc[2]})`;
   cx.fillRect(0,0,W,H);
 
@@ -2224,6 +2177,7 @@ function render(){
     if(p.y<top-120 || p.y>bot+120) continue;
     eachX(p.x, sx=> drawPlanet(sx, p));
   }
+
   for(const h of holes){
     if(h.y<top-300 || h.y>bot+300) continue;
     eachX(h.x, sx=>{
@@ -2292,14 +2246,13 @@ function render(){
         cx.beginPath(); cx.arc(0,0,14,0,TAU); cx.stroke();
       }
       cx.fillStyle = '#ffb648';
-      cx.beginPath(); cx.moveTo(0,-9); cx.lineTo(6.5,0); cx.lineTo(0,9); cx.lineTo(-6.5,0); cx.closePath();
-      cx.fill();
+      cx.beginPath(); cx.moveTo(0,-9); cx.lineTo(6.5,0); cx.lineTo(0,9); cx.lineTo(-6.5,0); cx.closePath(); cx.fill();
       cx.fillStyle = 'rgba(255,255,255,.85)';
-      cx.beginPath(); cx.moveTo(0,-4.5); cx.lineTo(3,0); cx.lineTo(0,4.5); cx.lineTo(-3,0); cx.closePath();
-      cx.fill();
+      cx.beginPath(); cx.moveTo(0,-4.5); cx.lineTo(3,0); cx.lineTo(0,4.5); cx.lineTo(-3,0); cx.closePath(); cx.fill();
       cx.restore();
     });
   }
+
   for(const pk of pickups){
     if(pk.y<top||pk.y>bot) continue;
     eachX(pk.x, sx=>{
@@ -2319,6 +2272,7 @@ function render(){
       cx.restore();
     });
   }
+
   for(const m of mines){
     const [mx,my] = minePos(m);
     if(my<top||my>bot) continue;
@@ -2334,10 +2288,12 @@ function render(){
     }
     eachX(mx, sx=> drawMineAt(sx, my, m));
   }
+
   for(const T of turrets){
     if(T.y<top-40||T.y>bot+40) continue;
     eachX(T.x, sx=> drawTurretAt(sx, T));
   }
+
   for(const bo of bolts){
     if(bo.y<top||bo.y>bot) continue;
     eachX(bo.x, sx=>{
@@ -2353,6 +2309,7 @@ function render(){
       cx.beginPath(); cx.arc(sx, bo.y, 2.4, 0, TAU); cx.fill();
     });
   }
+
   for(const rk of rocks){
     if(rk.y<top-40||rk.y>bot+40) continue;
     eachX(rk.x, sx=>{
@@ -2372,6 +2329,7 @@ function render(){
       cx.restore();
     });
   }
+
   for(const mt of meteors){
     eachX(mt.x, sx=>{
       const L = 60;
@@ -2402,11 +2360,13 @@ function render(){
       if(a < 0.03) continue;
       cx.globalAlpha = a;
       cx.fillStyle = '#ffb648';
-      const yy = camY + 26;
+      /* FIX: індикатор нижче HUD (не перекриває кнопки звуку/паузи),
+         вістря дивиться ВГОРУ до планети + легке «дихання» */
+      const yy = camY + 70 + Math.sin(perf*2.6 + p.x*0.02)*2.5;
       cx.beginPath();
-      cx.moveTo(sx, yy+9);
-      cx.lineTo(sx-8, yy-5);
-      cx.lineTo(sx+8, yy-5);
+      cx.moveTo(sx, yy - 8);
+      cx.lineTo(sx - 7, yy + 4);
+      cx.lineTo(sx + 7, yy + 4);
       cx.closePath(); cx.fill();
     }
     cx.globalAlpha = 1;
@@ -2451,6 +2411,7 @@ function render(){
     });
     cx.globalAlpha = 1;
   }
+
   if(player && player.alive){
     const blink = player.inv>0 && Math.sin(perf*22)>0;
     const fx = curSkin().fx;
@@ -2579,10 +2540,12 @@ function render(){
     if('letterSpacing' in cx) cx.letterSpacing = '0px';
     cx.globalAlpha = 1;
   }
+
   if(deathFlash>0){
     cx.fillStyle = `rgba(255,235,235,${clamp(deathFlash,0,1)*0.55})`;
     cx.fillRect(0,0,W,H);
   }
+
   /* пост-обробка активним стилем */
   styleCanvas(cv, cx, curStyle());
 }
@@ -2729,23 +2692,15 @@ function drawStylePreview(){
 }
 
 /* ============================================================
-   PACK OPENING CINEMATIC (+ дроп стилів)
-   ============================================================ */
+   PACK OPENING CINEMATIC
+============================================================ */
 const caseCv = $('caseCv');
-let CW = 560, CH = 250;
+const CW = 560, CH = 250;
 caseCv.width = CW*2; caseCv.height = CH*2;
-const kg = caseCv.getContext('2d'); kg.setTransform(2,0,0,2,0,0);
+const kg = caseCv.getContext('2d'); kg.scale(2,2);
 const itemCv = document.createElement('canvas');
 itemCv.width = 240; itemCv.height = 180;
 const itemCtx = itemCv.getContext('2d');
-function fitCaseStage(){ /* щоб пак не розтягувався на вузьких екранах */
-  const st = $('caseStage');
-  const w = st.clientWidth|0, h = st.clientHeight|0;
-  if(w < 10 || h < 10) return;
-  CW = w; CH = h;
-  caseCv.width = w*2; caseCv.height = h*2;
-  kg.setTransform(2,0,0,2,0,0);
-}
 
 let caseType=null, caseRevealed=false, revDrop=null;
 let cStage='', cT=0, cWinner=null, cDup=false;
@@ -2754,6 +2709,7 @@ let cParts=[], cRings=[], cConfettiP=[], cItem=null;
 function packColors(){
   return caseType==='prem' ? { a:'#b06bff' } : { a:'#ffb648' };
 }
+
 function tryOpen(type, free){
   const p = PACKS[type];
   if(!free && save.crystals < p.cost){ toast('NOT ENOUGH CRYSTALS'); return; }
@@ -2764,6 +2720,7 @@ function tryOpen(type, free){
     : save.owned.includes(drop.item.id);
   startPackSequence(type, drop, dup);
 }
+
 function startPackSequence(type, drop, dup){
   caseType = type; caseRevealed = false; revDrop = null;
   cWinner = drop; cDup = dup;
@@ -2774,9 +2731,9 @@ function startPackSequence(type, drop, dup){
   $('stageHint').classList.remove('hidden');
   $('casePanel').classList.remove('hype');
   $('case').classList.remove('hidden');
-  fitCaseStage();
   sfxOpen();
 }
+
  $('caseStage').addEventListener('pointerdown', ()=>{
   audioInit();
   if(cStage==='idle'){
@@ -2786,6 +2743,7 @@ function startPackSequence(type, drop, dup){
     vib(20);
   }
 });
+
 function spawnBurst(col){
   for(let i=0;i<48;i++){
     const a = rnd(TAU), v = rnd(120,440);
@@ -2796,6 +2754,7 @@ function spawnBurst(col){
   cRings.push({ r:12, a:1 });
   sfxPulse(); shake(6, 0.2); vib(45);
 }
+
 function beginReveal(){
   caseRevealed = true; revDrop = cWinner;
   const it = cWinner.item, isStyle = cWinner.kind==='style';
@@ -2822,6 +2781,7 @@ function beginReveal(){
   const cost = PACKS[caseType].cost;
   $('btnAgain').textContent = 'MORE · ' + cost;
   $('btnAgain').disabled = save.crystals < cost;
+
   sfxReveal(it.r);
   vib(50);
   if(it.r==='mythic' || it.r==='legendary'){
@@ -2832,6 +2792,7 @@ function beginReveal(){
     if(cStage==='reveal') $('caseReveal').classList.remove('hidden');
   }, 520);
 }
+
 function drawPack(x, y, amp, glowK, col){
   kg.save();
   kg.translate(x + (amp ? Math.sin(cT*58)*amp : 0), y);
@@ -2848,24 +2809,29 @@ function drawPack(x, y, amp, glowK, col){
   kg.fillStyle = grad;
   rr2(kg, -bw/2, -bh/2, bw, bh, 13); kg.fill();
   kg.strokeStyle = col.a; kg.lineWidth = 2; kg.stroke();
+
   kg.strokeStyle = hexA(col.a,.5); kg.lineWidth = 1.4;
   kg.beginPath(); kg.moveTo(-bw/2+9,-bh/2+lidH); kg.lineTo(bw/2-9,-bh/2+lidH); kg.stroke();
+
   kg.fillStyle = col.a;
   rr2(kg, -12, -bh/2+lidH-8, 24, 16, 5); kg.fill();
   kg.fillStyle = '#10151d';
   kg.beginPath(); kg.arc(0, -bh/2+lidH, 3.2, 0, TAU); kg.fill();
+
   kg.save(); kg.translate(0, 16);
   kg.fillStyle = hexA(col.a,.95);
   kg.beginPath(); kg.moveTo(0,-17); kg.lineTo(12,0); kg.lineTo(0,17); kg.lineTo(-12,0); kg.closePath(); kg.fill();
   kg.fillStyle = 'rgba(255,255,255,.85)';
   kg.beginPath(); kg.moveTo(0,-8.5); kg.lineTo(6,0); kg.lineTo(0,8.5); kg.lineTo(-6,0); kg.closePath(); kg.fill();
   kg.restore();
+
   kg.fillStyle = hexA(col.a,.5);
   [[-bw/2+11,-bh/2+11],[bw/2-11,-bh/2+11],[-bw/2+11,bh/2-11],[bw/2-11,bh/2-11]].forEach(p=>{
     kg.beginPath(); kg.arc(p[0],p[1],2.5,0,TAU); kg.fill();
   });
   kg.restore();
 }
+
 function drawBurst(col){
   const k = clamp(cT/0.38, 0, 1);
   kg.globalAlpha = 1-k;
@@ -2892,6 +2858,7 @@ function drawBurst(col){
   kg.restore();
   kg.globalAlpha = 1;
 }
+
 function drawRays(k, col){
   kg.save();
   kg.translate(CW/2, CH/2+8);
@@ -2907,6 +2874,7 @@ function drawRays(k, col){
   kg.restore();
   kg.globalAlpha = 1;
 }
+
 function drawStageItem(){
   const isStyle = cWinner.kind==='style';
   if(isStyle){
@@ -2916,6 +2884,7 @@ function drawStageItem(){
     drawOrbComet(itemCtx, 240, 180, cWinner.item, perf, 1);
   }
 }
+
 function caseFrame(dt){
   cT += dt;
   const col = packColors();
@@ -2974,6 +2943,7 @@ function caseFrame(dt){
   cConfettiP = cConfettiP.filter(p=>p.life>0 && p.y<CH+20);
 
   kg.clearRect(0,0,CW,CH);
+
   if(cStage==='drop' || cStage==='idle' || cStage==='shake'){
     let py, amp=0, glowK=0;
     if(cStage==='drop'){
@@ -2998,12 +2968,14 @@ function caseFrame(dt){
     const s = 1.18*cItem.scale;
     kg.drawImage(itemCv, cx0-60*s, cy0+8+cItem.y+bob-45*s, 120*s, 90*s);
   }
+
   for(const r of cRings){
     kg.globalAlpha = Math.max(0, r.a);
     kg.strokeStyle = col.a; kg.lineWidth = 2.5;
     kg.beginPath(); kg.arc(cx0, cy0+8, r.r, 0, TAU); kg.stroke();
   }
   kg.globalAlpha = 1;
+
   for(const p of cParts){
     kg.globalAlpha = clamp(p.life/p.max, 0, 1);
     kg.fillStyle = p.c;
@@ -3020,6 +2992,7 @@ function caseFrame(dt){
   }
   kg.globalAlpha = 1;
 }
+
 function closeCase(){
   $('case').classList.add('hidden');
   cStage=''; cWinner=null; revDrop=null; caseRevealed=false;
@@ -3146,25 +3119,26 @@ function refreshMissions(){
     </div>`;
   }).join('');
 }
+
  $('packStd').onclick  = ()=>{ audioInit(); tryOpen('std'); };
  $('packPrem').onclick = ()=>{ audioInit(); tryOpen('prem'); };
- $('skPrev').onclick   = ()=>{ skinIdx = mod(skinIdx-1, SKINS.length); refreshCollection(); };
- $('skNext').onclick   = ()=>{ skinIdx = mod(skinIdx+1, SKINS.length); refreshCollection(); };
- $('skAct').onclick = ()=>{
+ $('skPrev').onclick = ()=>{ skinIdx = mod(skinIdx-1, SKINS.length); refreshCollection(); };
+ $('skNext').onclick = ()=>{ skinIdx = mod(skinIdx+1, SKINS.length); refreshCollection(); };
+ $('skAct').onclick  = ()=>{
   const s = SKINS[skinIdx];
   if(!save.owned.includes(s.id)) return;
   save.skin = s.id; persist(); refreshCollection();
 };
  $('stPrev').onclick = ()=>{ styleIdx = mod(styleIdx-1, STYLES.length); refreshStyleUI(); };
  $('stNext').onclick = ()=>{ styleIdx = mod(styleIdx+1, STYLES.length); refreshStyleUI(); };
- $('stAct').onclick = ()=>{
+ $('stAct').onclick  = ()=>{
   const st = STYLES[styleIdx];
   if(!save.styled.includes(st.id)) return;
   save.style = st.id; persist(); refreshStyleUI();
 };
  $('pPrev').onclick = ()=>{ pIdx = mod(pIdx-1, PTHEMES.length); refreshPlanetUI(); };
  $('pNext').onclick = ()=>{ pIdx = mod(pIdx+1, PTHEMES.length); refreshPlanetUI(); };
- $('pAct').onclick = ()=>{
+ $('pAct').onclick   = ()=>{
   const t = PTHEMES[pIdx];
   if(save.powned.includes(t.id)){
     save.pskin = t.id; persist(); refreshPlanetUI(); return;
@@ -3179,6 +3153,7 @@ function refreshMissions(){
 };
 
 function startGame(){
+  if(!loadDone) return;                      // FIX: не стартуємо з-під лоадера
   audioInit();
   $('menu').classList.add('hidden');
   $('death').classList.add('hidden');
@@ -3231,6 +3206,7 @@ function syncMute(){
   skinIdx = 0; pIdx = 0; styleIdx = 0;
   persist(); refreshMenu(); toast('PROGRESS RESET');
 };
+
 /* мобільний чит: 5 тапів по гаманцю (теж прибрати перед релізом) */
 let cheatTaps = 0, cheatTapT = 0;
  $('wallet').addEventListener('pointerdown', ()=>{
@@ -3256,44 +3232,62 @@ let cheatTaps = 0, cheatTapT = 0;
     }
 })();
 
-/* ---------------- SPLASH / LAUNCH ---------------- */
-const SPLASH_TIPS = [
-  'Tap &amp; hold near a planet to catch an orbit',
-  'Release to sling along the tangent',
-  'Crystals charge your PULSE',
-  'Graze mines for CLOSE CALL bonuses',
-  'Open packs — unlock skins &amp; art styles'
+/* ---------------- LOADER ---------------- */
+let loadDone = false, loadTipTimer = null;
+const LOAD_TIPS = [
+  'Collect <b>crystals</b> to charge your <b>PULSE</b>',
+  'A <b>flyby</b> near a planet gives +40 points',
+  'Graze a mine — <b>CLOSE CALL</b> +60',
+  'A <b>shield</b> blocks one hit — even a black hole',
+  'Double-<b>tap</b> fast to fire the PULSE',
+  'Hold near a planet to catch an <b>orbit</b>'
 ];
- $('splashTip').innerHTML = SPLASH_TIPS[Math.random()*SPLASH_TIPS.length|0];
-let splashReady = false, splashGone = false, splashIv = null;
-splashIv = setInterval(()=>{
-  let p = parseFloat($('splashFill').style.width) || 0;
-  p = Math.min(100, p + rnd(8,16));
-  $('splashFill').style.width = p + '%';
-  if(p >= 100){
-    clearInterval(splashIv);
-    splashReady = true;
-    $('splashTap').classList.add('on');
-    setTimeout(()=> endSplash(false), 3200); /* авто-перехід, якщо не тапнули */
-  }
-}, 80);
-function endSplash(byUser){
-  if(splashGone) return;
-  splashGone = true;
-  clearInterval(splashIv);
-  if(byUser){
-    audioInit(); /* розблокування звуку жестом */
-    try{
-      if(IS_TOUCH && document.documentElement.requestFullscreen)
-        document.documentElement.requestFullscreen().catch(()=>{});
-    }catch(e){}
-  }
-  const s = $('splash');
-  s.classList.add('out');
-  setTimeout(()=> s.remove(), 650);
+(function buildLoaderLogo(){
+  const el = $('loadLogo');
+  let i = 0;
+  for(const [txt, em] of [['GRAVI',false],['TON',true]])
+    for(const ch of txt){
+      const s = document.createElement('span');
+      s.textContent = ch;
+      s.style.setProperty('--i', i++);
+      if(em) s.className = 'em';
+      el.appendChild(s);
+    }
+})();
+const wait = ms => new Promise(r=>setTimeout(r, ms));
+function setLoad(v){
+  if(loadDone) return;
+  $('loadBar').firstElementChild.style.width = v+'%';
+  $('loadPct').textContent = Math.round(v)+'%';
+}
+function hideLoader(){
+  if(loadDone) return;
+  loadDone = true;
+  clearInterval(loadTipTimer);
+  const L = $('loader');
+  L.classList.add('off');
+  setTimeout(()=>{ if(L && L.parentNode) L.parentNode.removeChild(L); }, 650);
   checkDaily();
 }
- $('splash').addEventListener('pointerdown', ()=> endSplash(true));
+async function bootLoader(){
+  loadTipTimer = setInterval(()=>{
+    const t = $('loadTip');
+    if(t) t.innerHTML = LOAD_TIPS[Math.random()*LOAD_TIPS.length|0];
+  }, 1300);
+  $('loadTip').innerHTML = LOAD_TIPS[0];
+  setLoad(8);
+  try{ if(document.fonts && document.fonts.ready)
+         await Promise.race([document.fonts.ready, wait(1400)]); }catch(e){}
+  setLoad(40);
+  await wait(150);
+  try{ await Promise.race([cgInitPromise || wait(0), wait(1600)]); }catch(e){}
+  setLoad(76);
+  await wait(150);
+  setLoad(100);
+  await wait(350);
+  hideLoader();
+}
+setTimeout(hideLoader, 6000);   // failsafe: лоадер ніколи не зависає
 
 resize();
 syncMute();
@@ -3329,6 +3323,7 @@ function loop(t){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+bootLoader();
 </script>
 </body>
 </html>
