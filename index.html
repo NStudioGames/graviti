@@ -23,8 +23,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
 font-family:'Rubik',sans-serif;user-select:none;-webkit-user-select:none;touch-action:none;
 -webkit-touch-callout:none;overscroll-behavior:none}
 #gameWrap{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);
-width:min(100vw, calc(100vh * 0.5625));box-shadow:0 0 90px rgba(110,200,255,.07)}
-canvas#cv{position:absolute;inset:0;display:block;touch-action:none;cursor:crosshair}
+width:min(100vw, calc(100vh * 0.5625));box-shadow:0 0 90px rgba(110,200,255,.07);overflow:hidden}
+canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .hidden{display:none!important}
 /* ===== LOADER ===== */
 #loader{position:fixed;inset:0;z-index:500;background:var(--bg);
@@ -277,7 +277,13 @@ font-weight:600;font-size:11px;letter-spacing:2px;border-radius:6px;padding:6px 
 </style>
 </head>
 <body>
-<!-- ===== ЕКРАН ЗАВАНТАЖЕННЯ ===== -->
+<!-- v7.2 FIXES:
+     1) resize/rotate: світ тепер не «залишається» за краями екрана (усі x-координати
+        ремапляться під нову ширину) — комета й планети більше не зникають.
+     2) Стрілка-індикатор планети над екраном тепер дивиться ВГОРУ, а не вниз.
+     3) Підказка «tap the pack to open it» ховається після відкриття пака.
+     4) Нагорода у паку тепер велика й читабельна (більший preview + підсвітка),
+        промені яскравіші в колір пака. -->
 <div id="loader">
 <div class="ldr-box">
 <div class="ldr-logo" id="ldrLogo"></div>
@@ -439,7 +445,7 @@ font-weight:600;font-size:11px;letter-spacing:2px;border-radius:6px;padding:6px 
 <div class="hint" id="ctrlHint"></div>
 <div id="menuFoot">
 <button id="btnSound2">Sound: on</button>
-<span id="ver">v7.1</span>
+<span id="ver">v7.2</span>
 </div>
 </div>
 </div>
@@ -461,7 +467,7 @@ font-weight:600;font-size:11px;letter-spacing:2px;border-radius:6px;padding:6px 
 <button class="btn ghost" id="btnTake" style="padding:13px 24px;font-size:12px;margin-top:20px">TAKE</button>
 </div>
 </div>
-<div class="keyhint">tap the pack to open it</div>
+<div class="keyhint" id="caseHint">tap the pack to open it</div>
 </div>
 </div>
 <div id="death" class="overlay hidden">
@@ -525,9 +531,6 @@ document.body.appendChild(el);
 }
 el.textContent = 'Error: ' + e.message;
 });
-/* ============================================================
-   PLAY-READY: standalone detection + умовне підключення SDK
-   ============================================================ */
 const IS_APP = (function(){
 try{
 return matchMedia('(display-mode: standalone)').matches
@@ -545,9 +548,6 @@ document.head.appendChild(sdkS);
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
 const gWrap = document.getElementById('gameWrap');
 let W = 0, H = 0, DPR = 1, vign = null;
-/* ============================================================
-   ЯКІСТЬ: детект слабких пристроїв + авто-даунгрейд
-   ============================================================ */
 const LOW_FX = ((navigator.deviceMemory || 8) <= 2) || ((navigator.hardwareConcurrency || 8) <= 3);
 let HQ = !LOW_FX;
 let degraded = false;
@@ -564,12 +564,44 @@ gr.addColorStop(0,'rgba(0,0,0,0)');
 gr.addColorStop(1,'rgba(0,0,0,0.5)');
 g.fillStyle = gr; g.fillRect(0,0,vign.width,vign.height);
 }
+/* ===== FIX v7.2: при зміні ширини (поворот/resize) усі x-координати світу
+   переносяться в нові межі, щоб об'єкти не опинялись за краєм екрана ===== */
+function remapWorldX(oldW){
+if(!oldW || oldW===W) return;
+const rx = v => mod(v, W);
+const rem = o => { if(o && typeof o.x==='number' && isFinite(o.x)) o.x = rx(o.x); };
+if(Array.isArray(planets)) for(const p of planets){ rem(p); if(p.osc) p.osc.x0 = rx(p.osc.x0); }
+if(Array.isArray(mines)) for(const m of mines){ if(m.type==='patrol') m.x0 = rx(m.x0); else rem(m); }
+if(Array.isArray(rocks)) rocks.forEach(rem);
+if(Array.isArray(holes)) for(const h of holes){ rem(h); if(typeof h.baseX==='number') h.baseX = rx(h.baseX); }
+if(Array.isArray(turrets)) turrets.forEach(rem);
+if(Array.isArray(bolts)) bolts.forEach(rem);
+if(Array.isArray(meteors)) meteors.forEach(rem);
+if(Array.isArray(crystals)) crystals.forEach(rem);
+if(Array.isArray(pickups)) pickups.forEach(rem);
+if(Array.isArray(waves)) waves.forEach(rem);
+if(Array.isArray(bossWaves)) bossWaves.forEach(rem);
+if(Array.isArray(parts)) parts.forEach(rem);
+if(Array.isArray(floats)) floats.forEach(rem);
+if(Array.isArray(trail)) trail.forEach(rem);
+if(trap && typeof trap.cx==='number') trap.cx = rx(trap.cx);
+if(boss) boss.x = rx(boss.x);
+if(evt && evt.h){ evt.h.x = rx(evt.h.x); evt.h.baseX = rx(evt.h.baseX); }
+if(player && !player.orbit) rem(player);
+if(state==='menu' && typeof demo!=='undefined' && demo){
+for(const p of demo.ps){ rem(p); if(p.osc) p.osc.x0 = rx(p.osc.x0); }
+if(demo.bot) rem(demo.bot);
+if(Array.isArray(demo.trail)) demo.trail.forEach(rem);
+}
+}
 function resize(){
+const oldW = W;
 DPR = Math.min(devicePixelRatio || 1, degraded ? 1 : (LOW_FX ? 1.5 : 2));
 W = Math.max(1, gWrap.clientWidth);
 H = Math.max(1, gWrap.clientHeight);
 cv.width = W * DPR; cv.height = H * DPR;
 cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+remapWorldX(oldW);
 buildVign();
 if(state==='menu') demoInit();
 moveInd();
@@ -787,15 +819,42 @@ while(save.missions.length < 3)
 save.missions.push(genMission(save.missions.map(m=>m.id)));
 }
 function normalizeSave(){
-if(!Array.isArray(save.owned)||!save.owned.length) save.owned=['amber'];
-if(!Array.isArray(save.powned)||!save.powned.length) save.powned=['classic'];
-if(!Array.isArray(save.styled)||!save.styled.length) save.styled=['classic'];
-if(!Array.isArray(save.roened)) save.roened=[];
-if(!Array.isArray(save.missions)) save.missions=[];
-if(typeof save.streak!=='number') save.streak=0;
-if(typeof save.bossKills!=='number') save.bossKills=0;
-if(typeof save.tutDone!=='boolean') save.tutDone=!!save.tutDone;
-if(!STMAP[save.style]) save.style='classic';
+const count = (v, fallback=0)=>{
+const n = Number(v);
+return Number.isFinite(n) && n>=0 ? Math.floor(n) : fallback;
+};
+/* Sanitize imported/older saves so a partial or malformed save can't break the menu. */
+save.best = count(save.best);
+save.crystals = count(save.crystals);
+save.games = count(save.games);
+save.streak = count(save.streak);
+save.bossKills = count(save.bossKills);
+save.adBonusAt = count(save.adBonusAt);
+save.adPackAt = count(save.adPackAt);
+save.mute = !!save.mute;
+save.tutDone = !!save.tutDone;
+if(typeof save.lastDaily !== 'string') save.lastDaily = '';
+save.owned = Array.isArray(save.owned) ? [...new Set(save.owned.filter(id=>SKINS.some(x=>x.id===id)))] : [];
+if(!save.owned.length) save.owned = ['amber'];
+if(!save.owned.includes(save.skin)) save.skin = save.owned[0];
+save.powned = Array.isArray(save.powned) ? [...new Set(save.powned.filter(id=>PTHEMES.some(x=>x.id===id)))] : [];
+if(!save.powned.length) save.powned = ['classic'];
+if(!save.powned.includes(save.pskin)) save.pskin = save.powned[0];
+save.styled = Array.isArray(save.styled) ? [...new Set(save.styled.filter(id=>STYLES.some(x=>x.id===id)))] : [];
+if(!save.styled.length) save.styled = ['classic'];
+if(!save.styled.includes(save.style)) save.style = save.styled[0];
+save.roened = Array.isArray(save.roened) ? [...new Set(save.roened.filter(id=>RELICS.some(x=>x.id===id)))] : [];
+const cleanMissions = [];
+if(Array.isArray(save.missions)) for(const m of save.missions){
+if(!m || typeof m.id!=='string') continue;
+const def = MISSIONS.find(x=>x.id===m.id);
+if(!def || cleanMissions.some(x=>x.id===def.id)) continue;
+const target = Number(m.n);
+const n = def.ns.includes(target) ? target : def.ns[0];
+const best = Number(m.best);
+cleanMissions.push({ id:def.id, n, best:Number.isFinite(best)&&best>0 ? Math.min(n,best) : 0 });
+}
+save.missions = cleanMissions.slice(0,3);
 ensureMissions();
 }
 let lastSaveAt = 0;
@@ -809,7 +868,12 @@ updateSaveStatus();
 }
 function readStore(getter){
 for(const k of [SAVE_KEY, ...SAVE_KEYS_OLD]){
-try{ const s = getter(k); if(s) return JSON.parse(s); }catch(e){}
+try{
+const raw = getter(k);
+if(raw==null || raw==='') continue;
+const value = typeof raw==='string' ? JSON.parse(raw) : raw;
+if(value && typeof value==='object' && !Array.isArray(value)) return value;
+}catch(e){}
 }
 return null;
 }
@@ -1192,21 +1256,11 @@ const base = { common:392, rare:523.25, epic:659.25, legendary:783.99, mythic:98
 if(r==='legendary') noiseBurst(0.6, 600, 4000, 0.1);
 if(r==='mythic'){ noiseBurst(0.6, 600, 4000, 0.12); setTimeout(()=>noiseBurst(0.8, 200, 5000, 0.14), 260); }
 }
-/* ============================================================
-   РЕКЛАМА — ПІДГОТОВЛЕНА, АЛЕ ВИМКНЕНА
-   ------------------------------------------------------------
-   Щоб увімкнути: поставте ADS.enabled = true.
-   Провайдери (вибираються автоматично):
-   • 'admob'      — якщо в збірці Capacitor є window.AdMobBridge:
-        AdMobBridge.showInterstitial(function(ok){...})
-        AdMobBridge.showRewarded(function(ok){...})
-   • 'crazygames' — якщо доступний CrazyGames SDK (веб-версія).
-   Інтерстишали: не раніше 2-го запуску, далі кожні 3 смерті.
-   ============================================================ */
+/* ===== РЕКЛАМА: підготовлена, ВИМКНЕНА (ADS.enabled=false) ===== */
 const ADS = {
-enabled: false,            // ← ГОЛОВНИЙ ПЕРЕМИКАЧ (зараз: ВИМКНЕНО)
-interstitialEvery: 3,      // кожні N смертей
-firstAfterRuns: 2,         // не показувати в перших N запусках
+enabled: false,
+interstitialEvery: 3,
+firstAfterRuns: 2,
 runsSinceAd: 0,
 provider(){
 if(!this.enabled) return null;
@@ -1227,14 +1281,8 @@ showInterstitial(done){
 const p = this.provider();
 if(!p){ done(false); return; }
 try{
-if(p==='admob'){
-window.AdMobBridge.showInterstitial(ok=>done(!!ok));
-return;
-}
-window.CrazyGames.SDK.ad.requestAd('midgame', {
-adFinished: ()=>done(true),
-adError: ()=>done(false)
-});
+if(p==='admob'){ window.AdMobBridge.showInterstitial(ok=>done(!!ok)); return; }
+window.CrazyGames.SDK.ad.requestAd('midgame', { adFinished: ()=>done(true), adError: ()=>done(false) });
 }catch(e){ done(false); }
 },
 showRewarded(onOk, onFail){
@@ -1281,7 +1329,6 @@ evt = { id:null, t:0, total:0, ph:0, h:null, spawnT:0 };
 phoenixUsed = false;
 crystalBanked = 0;
 runStats = { crystalRun:0, maxCombo:0, depthMax:0, grazes:0, flybys:0, pulseKills:0, rockKills:0 };
-/* FIXED: туторіал показується лише один раз */
 if(!save.tutDone && save.games >= 3){ save.tutDone = true; persist(); }
 tutStage = save.tutDone ? -1 : 0;
 startY = H*0.78;
@@ -1300,38 +1347,80 @@ while(nextY > camY - H*1.6){ spawnBand(nextY); nextY -= rnd(300, 430); }
 }
 function diffAt(y){ return clamp((startY - y)/6500, 0, 1); }
 function zoneAtY(y){ return zoneMix((startY - y)/12).i; }
+function planetPositionClear(x,y,r,motionAmp=0){
+/* Keep a small visual gap between planets. Account for the full horizontal
+   travel of oscillating planets so they cannot drift into each other later. */
+for(const other of planets){
+const minDist = r + other.r + 14;
+const dy = Math.abs(y - other.y);
+if(dy >= minDist) continue;
+const minX = Math.sqrt(Math.max(0, minDist*minDist - dy*dy));
+const otherMotion = other.osc ? Math.abs(other.osc.amp) : 0;
+if(Math.abs(dxw(x, other.x)) < minX + Math.abs(motionAmp) + otherMotion) return false;
+}
+return true;
+}
+function spawnPlanetSafe(y,r,gold=false,motionAmp=0){
+const margin = Math.min(Math.max(28, r+12), Math.max(28, W*0.38));
+const lo = Math.min(margin, Math.max(1, W-2));
+const hi = Math.max(lo+1, W-margin);
+/* Normally the first row succeeds immediately. If a nearby row is crowded,
+   test small vertical offsets as well as X positions instead of overlapping. */
+for(let off=0; off<=720; off+=24){
+const ys = off===0 ? [y] : [y-off, y+off];
+for(const py of ys){
+for(let attempt=0; attempt<24; attempt++){
+const x = rnd(lo, hi);
+if(!planetPositionClear(x, py, r, motionAmp)) continue;
+const p = { x, y:py, r, spin:rnd(TAU), gold:!!gold, fly:false };
+if(motionAmp>0) p.osc = { x0:x, amp:motionAmp, spd:rnd(0.35,0.7), ph:rnd(TAU) };
+return p;
+}
+}
+}
+/* Finite fallback: the generated world is sparse, so a distant candidate
+   should always be available even if several previous rows were crowded. */
+for(let off=744; off<12000; off+=48){
+for(const py of [y-off,y+off]){
+for(const x of [W/2, W*0.25, W*0.75, rnd(lo,hi)]){
+if(!planetPositionClear(x,py,r,motionAmp)) continue;
+const p = { x:mod(x,W), y:py, r, spin:rnd(TAU), gold:!!gold, fly:false };
+if(motionAmp>0) p.osc = { x0:p.x, amp:motionAmp, spd:rnd(0.35,0.7), ph:rnd(TAU) };
+return p;
+}
+}
+}
+return null;
+}
 function spawnBand(by){
 const diff = diffAt(by);
 const zn = zoneAtY(by);
 const noHaz = !!boss || bossWarn>0;
-const mkPlanet = (x,y,r,gold)=>({ x, y, r, spin:rnd(TAU), gold:!!gold, fly:false });
-const p = mkPlanet(rnd(80, W-80), by, rnd(26, 46));
-if(zn>=1 && !p.gold && Math.random()<0.22)
+const pRadius = rnd(26, 46);
+const pMotion = zn>=2 && Math.random()<0.32 ? rnd(40,90) : 0;
+const p = spawnPlanetSafe(by, pRadius, false, pMotion);
+if(!p) return;
+if(zn>=1 && Math.random()<0.22)
 p.ring = { t:rnd(-0.35,0.35), r1:p.r*1.55, r2:p.r*2.05 };
-if(zn>=2 && Math.random()<0.32)
-p.osc = { x0:p.x, amp:rnd(40,90), spd:rnd(0.35,0.7), ph:rnd(TAU) };
 planets.push(p);
 if(Math.random() < 0.32){
-let tries=0, p2=null;
-while(tries++<8){
-const c = mkPlanet(rnd(80, W-80), by - rnd(110,180), rnd(24,38));
-if(Math.abs(dxw(c.x,p.x)) > 200 || Math.abs(c.y-p.y) > 130){ p2=c; break; }
-}
-if(p2){
-if(zn>=2 && Math.random()<0.3)
-p2.osc = { x0:p2.x, amp:rnd(40,80), spd:rnd(0.35,0.7), ph:rnd(TAU) };
-planets.push(p2);
-}
+const y2 = by - rnd(110,180);
+const r2 = rnd(24,38);
+const motion2 = zn>=2 && Math.random()<0.3 ? rnd(40,80) : 0;
+const p2 = spawnPlanetSafe(y2, r2, false, motion2);
+if(p2) planets.push(p2);
 }
 if(Math.random() < 0.07){
-const g = mkPlanet(rnd(90, W-90), by - rnd(140, 240), 30, true);
+const g = spawnPlanetSafe(by - rnd(140,240), 30, true, 0);
+if(g){
 planets.push(g);
 const n = 7, base = rnd(TAU);
 for(let i=0;i<n;i++){
 const a = base + i/n*TAU;
-crystals.push({ x:g.x+Math.cos(a)*(g.r+58), y:g.y+Math.sin(a)*(g.r+58), ph:rnd(TAU), mag:false, vx:0, vy:0 });
+crystals.push({ x:mod(g.x+Math.cos(a)*(g.r+58),W), y:g.y+Math.sin(a)*(g.r+58), ph:rnd(TAU), mag:false, vx:0, vy:0 });
 }
 return;
+}
 }
 if(Math.random() < 0.55){
 const n = 3 + (Math.random()*3|0), base = rnd(TAU), rr = p.r + 70;
@@ -1448,7 +1537,6 @@ tutShow('Grab <b>crystals</b>, catch <b>shields</b> and charge your <b>PULSE</b>
 setTimeout(()=>{
 if(tutStage===2){
 tut(0);
-/* FIXED: туторіал завершено — більше не повторюється */
 save.tutDone = true; persist();
 }
 }, 4500);
@@ -1902,7 +1990,6 @@ parts.push({ x:player.x, y:player.y, vx:0, vy:0, life:.6, max:.6, r:10, c:'#ff4d
 shake(16, 0.55); sfxBoom();
 vib(70);
 const score = Math.floor(depthMax) + crystalScore;
-/* FIXED: банкуємо лише дельту кристалів (захист від дубля після відродження) */
 const earned = runStats.crystalRun - crystalBanked;
 crystalBanked = runStats.crystalRun;
 save.crystals += earned;
@@ -1911,7 +1998,6 @@ if(isBest){ save.best = score; cgHappy(); }
 persist();
 setTimeout(()=>{
 if(state!=='dead') return;
-/* ADS: інтерстишал після смерті (працює лише якщо ADS.enabled=true) */
 ADS.maybeInterstitial();
 $('dCause').textContent = CAUSES[cause] || '—';
 $('dScore').textContent = score;
@@ -1987,7 +2073,6 @@ adError: fail
 timer = setTimeout(fail, 60000);
 }catch(e){ fail(); }
 }
-/* ADS: кнопки видимі лише якщо реклама увімкнена І провайдер доступний */
 function updateAdButtons(){
 const on = ADS.enabled && !!ADS.provider();
 $('btnAdCrys').classList.toggle('hidden', !on);
@@ -2065,7 +2150,6 @@ $('dailyCal').classList.remove('hidden');
 sfxZone();
 }
 function openDailyIfDue(delay){
-/* FIXED: щоденна нагорода відкривається лише в меню, не посеред гри */
 if(state!=='menu') return;
 if(save.lastDaily === new Date().toDateString()) return;
 if(!$('dailyCal').classList.contains('hidden')) return;
@@ -2104,7 +2188,6 @@ $('dailyCal').classList.add('hidden');
 calInfo = null;
 }, 1100);
 };
-/* ADS: rewarded-кристали через ADS.showRewarded */
 $('btnAdCrys').onclick = ()=>{
 audioInit();
 ADS.showRewarded(()=>{
@@ -2112,7 +2195,6 @@ save.crystals += AD_BONUS_AMT; save.adBonusAt = Date.now(); persist();
 refreshMenu(); toast('+'+AD_BONUS_AMT+' CRYSTALS'); sfxBuy();
 }, ()=> toast('AD UNAVAILABLE'));
 };
-/* ADS: безкоштовний пак за рекламу */
 $('btnAdPack').onclick = ()=>{
 audioInit();
 ADS.showRewarded(()=>{
@@ -2120,7 +2202,6 @@ save.adPackAt = Date.now(); persist();
 setTab('packs'); tryOpen('std', true);
 }, ()=> toast('AD UNAVAILABLE'));
 };
-/* ADS: rewarded-реанімація */
 $('btnReviveAd').onclick = ()=>{
 ADS.showRewarded(()=> doRevive(), ()=> toast('AD UNAVAILABLE'));
 };
@@ -2143,7 +2224,6 @@ if(ch){ persist(); if(state==='menu') refreshMissions(); }
 const elScore=$('score'),elDepth=$('depth'), elCombo=$('combo'),elPulse=$('pulseBar'),
 elPulseI=elPulse.querySelector('i'), elCrys=$('crys'),elZone=$('zoneTag');
 let lastMult=1;
-/* FIXED/OPTIMIZED: мемоізація HUD — жодних зайвих DOM-записів */
 const _hc = {};
 function updateHud(force){
 const score = Math.floor(depthMax) + crystalScore;
@@ -2198,10 +2278,8 @@ if(state==='playing' && player && player.orbit) launch();
 });
 addEventListener('pointercancel', ()=>{ if(state==='playing' && player && player.orbit) launch(); });
 cv.addEventListener('contextmenu', e=>e.preventDefault());
-/* FIXED: глобально блокуємо контекстне меню та подвійний зум */
 addEventListener('contextmenu', e=>e.preventDefault());
 addEventListener('dblclick', e=>e.preventDefault());
-/* FIXED: тап по екрану смерті на мобільних реально перезапускає */
 $('death').addEventListener('pointerdown', e=>{
 if(IS_TOUCH && e.target===$('death') && state==='dead' && perf-deadAt>0.8) startGame();
 });
@@ -2253,7 +2331,6 @@ else if(state==='paused') togglePause();
 if(e.code==='KeyR' && (state==='dead'||state==='playing')) startGame();
 if(e.code==='Escape' || e.code==='KeyP'){ if(state==='playing'||state==='paused') togglePause(); }
 });
-/* FIXED: пауза при згортанні + відновлення аудіо при поверненні */
 document.addEventListener('visibilitychange', ()=>{
 if(document.hidden && state==='playing') togglePause();
 if(!document.hidden && AC && AC.state==='suspended'){ try{ AC.resume(); }catch(e){} }
@@ -2484,7 +2561,7 @@ if(pl.inv>0) continue;
 if(pl.shield>0){
 pl.shield--; pl.inv = 1.5;
 const dx = dxw(pl.x, h.x), dy2 = pl.y - h.y, dl = Math.hypot(dx,dy2)||1;
-pl.vx = dx/dl*430; pl.vy = dy2/dl*430;
+pl.vx = dx/dl*430; player.vy = dy2/dl*430;
 floatTxt(pl.x, pl.y-26, 'SHIELD EJECT', '#6ec8ff', 13);
 parts.push({ x:pl.x, y:pl.y, vx:0, vy:0, life:.5, max:.5, r:14, c:'#6ec8ff', kind:'ring' });
 shake(9, 0.3); sfxBreak(); vib(45);
@@ -3150,6 +3227,7 @@ cx.globalAlpha = 1;
 });
 }
 if(state==='playing'){
+/* ===== FIX v7.2: стрілка-індикатор планети над екраном тепер дивиться ВГОРУ ===== */
 const ups = planets
 .filter(p=> p.y < top - 40)
 .sort((a,b)=> b.y - a.y)
@@ -3163,9 +3241,9 @@ cx.globalAlpha = a;
 cx.fillStyle = '#ffb648';
 const yy = camY + 26;
 cx.beginPath();
-cx.moveTo(sx, yy+9);
-cx.lineTo(sx-8, yy-5);
-cx.lineTo(sx+8, yy-5);
+cx.moveTo(sx, yy-9);
+cx.lineTo(sx-8, yy+5);
+cx.lineTo(sx+8, yy+5);
 cx.closePath(); cx.fill();
 }
 cx.globalAlpha = 1;
@@ -3568,8 +3646,34 @@ styleCanvas(stCv, stx, st.id);
 }
 const caseCv = $('caseCv');
 const CW = 560, CH = 250;
-caseCv.width = CW*2; caseCv.height = CH*2;
-const kg = caseCv.getContext('2d'); kg.scale(2,2);
+const kg = caseCv.getContext('2d');
+/* Keep the pack and reward artwork at its intended aspect ratio on every screen.
+   The canvas element fills the stage, but drawing is uniformly scaled and centered
+   inside it instead of being stretched independently along X and Y. */
+let caseCanvasW = 0, caseCanvasH = 0, caseCanvasDpr = 0;
+function fitCaseCanvas(){
+  const rect = caseCv.getBoundingClientRect();
+  const viewW = rect.width, viewH = rect.height;
+  if(viewW <= 0 || viewH <= 0) return false;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const pixelW = Math.max(1, Math.round(viewW * dpr));
+  const pixelH = Math.max(1, Math.round(viewH * dpr));
+  if(pixelW !== caseCanvasW || pixelH !== caseCanvasH || dpr !== caseCanvasDpr){
+    caseCv.width = pixelW;
+    caseCv.height = pixelH;
+    caseCanvasW = pixelW;
+    caseCanvasH = pixelH;
+    caseCanvasDpr = dpr;
+  }
+  const scale = Math.min(viewW / CW, viewH / CH);
+  const offsetX = (viewW - CW * scale) / 2;
+  const offsetY = (viewH - CH * scale) / 2;
+  // Clear the complete viewport before applying the centered virtual-canvas transform.
+  kg.setTransform(dpr, 0, 0, dpr, 0, 0);
+  kg.clearRect(0, 0, viewW, viewH);
+  kg.setTransform(dpr * scale, 0, 0, dpr * scale, offsetX * dpr, offsetY * dpr);
+  return true;
+}
 const itemCv = document.createElement('canvas');
 itemCv.width = 240; itemCv.height = 180;
 const itemCtx = itemCv.getContext('2d');
@@ -3601,6 +3705,8 @@ cParts = []; cRings = []; cConfettiP = []; cItem = null;
 $('caseTitle').textContent = type==='boss' ? 'BOSS DROP' : PACKS[type].name.toUpperCase();
 $('caseReveal').classList.add('hidden');
 $('stageHint').classList.remove('hidden');
+/* FIX v7.2: підказка знову видима для нового пака */
+$('caseHint').classList.remove('hidden');
 $('casePanel').classList.remove('hype');
 $('case').classList.remove('hidden');
 $('btnAgain').style.display = '';
@@ -3627,6 +3733,8 @@ sfxPulse(); shake(6, 0.2); vib(45);
 }
 function beginReveal(){
 caseRevealed = true; revDrop = cWinner;
+/* FIX v7.2: ховаємо підказку «tap the pack to open it» після відкриття */
+$('caseHint').classList.add('hidden');
 const it = cWinner.item, isStyle = cWinner.kind==='style', isRelic = cWinner.kind==='relic';
 if(cDup){
 save.crystals += isRelic ? RELIC_DUP : RARITY[it.r].dup;
@@ -3739,16 +3847,17 @@ kg.strokeStyle = hexA(col.a,.7); kg.lineWidth = 2; kg.stroke();
 kg.restore();
 kg.globalAlpha = 1;
 }
+/* FIX v7.2: промені яскравіші, в колір пака */
 function drawRays(k, col){
 kg.save();
 kg.translate(CW/2, CH/2+8);
 kg.rotate(perf*0.5);
-kg.globalAlpha = 0.10*k;
+kg.globalAlpha = 0.17*k;
 kg.fillStyle = col.a;
 for(let i=0;i<12;i++){
 kg.rotate(TAU/12);
 kg.beginPath();
-kg.moveTo(0,0); kg.lineTo(-14,300); kg.lineTo(14,300);
+kg.moveTo(0,0); kg.lineTo(-16,320); kg.lineTo(16,320);
 kg.closePath(); kg.fill();
 }
 kg.restore();
@@ -3767,6 +3876,7 @@ drawOrbComet(itemCtx, 240, 180, cWinner.item, perf, 1);
 }
 }
 function caseFrame(dt){
+if(!fitCaseCanvas()) return;
 cT += dt;
 const col = packColors();
 const cx0 = CW/2, cy0 = CH/2;
@@ -3839,11 +3949,19 @@ drawBurst(col);
 else if(cStage==='fall' || cStage==='reveal'){
 const rayK = cStage==='reveal' ? Math.min(1, 0.5+cT*2) : Math.min(0.55, cT*2);
 drawRays(rayK, col);
+/* FIX v7.2: підсвітка позаду нагороди */
+const bg = kg.createRadialGradient(cx0, cy0+8, 8, cx0, cy0+8, 150);
+bg.addColorStop(0, hexA(col.a, .20));
+bg.addColorStop(1, hexA(col.a, 0));
+kg.fillStyle = bg;
+kg.beginPath(); kg.arc(cx0, cy0+8, 150, 0, TAU); kg.fill();
 cItem.scale = 1 + (cItem.scale-1)*Math.pow(0.0005, dt);
 const bob = cItem.landed ? Math.sin(perf*3)*3 : 0;
 drawStageItem();
-const s = 1.18*cItem.scale;
-kg.drawImage(itemCv, cx0-60*s, cy0+8+cItem.y+bob-45*s, 120*s, 90*s);
+/* FIX v7.2: нагорода значно більша й читабельна */
+const s = cItem.scale;
+const iw = 210*s, ih = 157*s;
+kg.drawImage(itemCv, cx0-iw/2, cy0+6+cItem.y+bob-ih/2, iw, ih);
 }
 for(const r of cRings){
 kg.globalAlpha = Math.max(0, r.a);
@@ -4002,7 +4120,10 @@ return `<div class="relic ${owned?'':'unk'}"><b>${owned?r.name:'??? ???'}</b><sm
 function refreshMissions(){
 $('missList').innerHTML = save.missions.map(m=>{
 const M = MISSIONS.find(x=>x.id===m.id);
-const pct = Math.round(clamp(m.best/m.n,0,1)*100);
+if(!M) return '';
+const target = Math.max(1, Number(m.n)||1);
+const best = Math.max(0, Number(m.best)||0);
+const pct = Math.round(clamp(best/target,0,1)*100);
 return `<div class="mrow">
 <div class="mdot"></div>
 <div class="mbody">
@@ -4046,7 +4167,6 @@ toast('PLANET STYLE UNLOCKED');
 };
 function startGame(){
 audioInit();
-/* FIXED: запуски рахуються тут, а не при смерті */
 save.games++;
 try{ if(IS_APP && screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(()=>{}); }catch(e){}
 $('menu').classList.add('hidden');
@@ -4057,7 +4177,6 @@ bestBefore = save.best;
 resetRun();
 state='playing';
 cgStart();
-/* FIXED: підказка лише для новачків */
 if(!save.tutDone) tutShow('Release — the comet slings along the <b>tangent</b>');
 }
 function togglePause(){
@@ -4103,7 +4222,6 @@ cheatTaps = 0;
 grantCheat();
 }
 });
-/* PLAY-READY: кнопка «Назад» (Android) — пауза → меню → вихід */
 let lastBack = 0;
 try{ history.replaceState(null,'',location.href); history.pushState(null,'',location.href); }catch(e){}
 addEventListener('popstate', ()=>{
@@ -4139,7 +4257,7 @@ resize();
 syncMute();
 $('ctrlHint').innerHTML = IS_TOUCH
 ? '<b>Tap &amp; hold</b> near a planet to orbit — <b>release</b> to sling. Tap <b>PULSE</b> when charged. Watch for <b>bosses</b> deep below!'
-: '<b>Hold</b> near a planet to orbit — <b>release</b> to sling. <b>Double-tap / Space</b> fires the PULSE. <b>T-E-S-T</b> — god mode · <b>B</b> boss · <b>G</b> event.';
+: '<b>Hold</b> near a planet to orbit — <b>release</b> to sling. <b>Double-tap / Space</b> fires the PULSE. <b>B</b> boss · <b>G</b> event.';
 if(IS_TOUCH){
 $('deathHint').textContent = 'tap anywhere — instant restart';
 $('pauseHint').textContent = '';
@@ -4151,7 +4269,6 @@ function loop(t){
 const dtRaw = Math.max(0.001, (t-lastT)/1000);
 const dt = Math.min(0.033, dtRaw);
 lastT = t; frameN++;
-/* Авто-режим продуктивності для слабких пристроїв */
 if(!degraded && perf > 4){
 fpsEMA = lerp(fpsEMA, 1/dtRaw, 0.06);
 if(fpsEMA < 37) fpsBadT += dtRaw; else fpsBadT = Math.max(0, fpsBadT - dtRaw*1.5);
@@ -4161,7 +4278,6 @@ if(state==='menu'){
 perf += dt;
 demoUpdate(dt);
 camY = demo.cam;
-/* OPTIMIZED: превʼю лише активної вкладки, через кадр */
 if(frameN % 2 === 0){
 if(curTab==='skins') drawSkinPreview();
 else if(curTab==='planets') drawPlanetPreview();
@@ -4177,10 +4293,6 @@ render();
 requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-/* ============================================================
-   ЕКРАН ЗАВАНТАЖЕННЯ: комета на орбіті + прогрес-бар.
-   Чекаємо window.load + document.fonts.ready (з запобіжником).
-   ============================================================ */
 (function(){
 const ldr = $('loader'), bar = $('ldrBar'), txt = $('ldrTxt');
 const lc = $('ldrCv'), lg = lc.getContext('2d');
@@ -4193,7 +4305,7 @@ if(document.fonts && document.fonts.ready)
 document.fonts.ready.then(()=>ldFonts=true, ()=>ldFonts=true);
 else ldFonts = true;
 }catch(e){ ldFonts = true; }
-setTimeout(()=>{ ldWin = true; ldFonts = true; }, 4000); // запобіжник
+setTimeout(()=>{ ldWin = true; ldFonts = true; }, 4000);
 let on = true;
 function draw(now){
 const t = now/1000, c = 60, R = 34;
