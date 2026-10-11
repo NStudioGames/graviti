@@ -26,6 +26,7 @@ font-family:'Rubik',sans-serif;user-select:none;-webkit-user-select:none;touch-a
 width:min(100vw, calc(100vh * 0.5625));box-shadow:0 0 90px rgba(110,200,255,.07);overflow:hidden}
 canvas#cv{position:absolute;top:0;left:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .hidden{display:none!important}
+#hud.hidden ~ #pulseBtn{display:none!important}
 /* ===== LOADER ===== */
 #loader{position:fixed;inset:0;z-index:500;background:var(--bg);
 display:flex;align-items:center;justify-content:center;transition:opacity .45s ease}
@@ -79,7 +80,7 @@ background:rgba(16,21,29,.88);border:1px solid var(--line);border-radius:10px;pa
 font-size:14px;letter-spacing:.3px;opacity:0;transition:opacity .4s;text-align:center;max-width:88vw}
 #tut.on{opacity:1}
 #tut b{color:var(--amber);font-weight:600}
-#toast{position:absolute;top:22%;left:50%;transform:translate(-50%,-8px);z-index:30;pointer-events:none;
+#toast{position:fixed;top:22%;left:50%;transform:translate(-50%,-8px);z-index:60;pointer-events:none;
 font-family:'Unbounded';font-weight:800;font-size:clamp(16px,4.6vw,24px);letter-spacing:3px;color:var(--amber);
 opacity:0;transition:opacity .3s,transform .3s;text-align:center;max-width:90vw;
 text-shadow:0 2px 18px rgba(0,0,0,.7)}
@@ -336,8 +337,8 @@ font-weight:600;font-size:11px;letter-spacing:2px;border-radius:6px;padding:6px 
 <span>PULSE</span>
 </button>
 <div id="tut"></div>
-<div id="toast"></div>
 </div>
+<div id="toast"></div>
 <div id="menu" class="overlay">
 <div class="panel">
 <div class="logo" id="logoEl"></div>
@@ -791,7 +792,7 @@ const MISSIONS = [
 function genMission(excl){
 const pool = MISSIONS.filter(m=> !excl.includes(m.id));
 const M = pool[Math.random()*pool.length|0];
-return { id:M.id, n:M.ns[Math.random()*M.ns.length|0], best:0 };
+return { id:M.id, n:M.ns[Math.random()*M.ns.length|0], best:0, born:save.games };
 }
 const BOSS_TYPES = {
 colossus:{ name:'ASTEROID COLOSSUS', body:'#23282f', line:'#c9a06a', eye:'#ffb648',
@@ -914,7 +915,8 @@ let save = defSave();
 let skinIdx  = Math.max(0, SKINS.findIndex(s=>s.id===save.skin));
 let pIdx     = Math.max(0, PTHEMES.findIndex(t=>t.id===save.pskin));
 let styleIdx = Math.max(0, STYLES.findIndex(s=>s.id===save.style));
-const curSkin = ()=> SKINS[skinIdx];
+const SKMAP = {}; SKINS.forEach(s=>SKMAP[s.id]=s);
+const curSkin = ()=> SKMAP[save.skin] || SKINS[0];
 const curTheme = ()=> PTMAP[save.pskin] || PTHEMES[0];
 const curStyle = ()=> save.style;
 function trailColor(){
@@ -1026,6 +1028,7 @@ g.fillStyle = gr; g.fillRect(0,0,w,h); g.restore();
 }
 function styleCanvas(cnv, g, id){
 if(id==='classic' || !id) return;
+g.save(); g.setTransform(1,0,0,1,0,0);
 const w = cnv.width, h = cnv.height;
 const isMain = (cnv === cv);
 let snap = null;
@@ -1167,6 +1170,7 @@ if(snap){
 g.save(); g.globalCompositeOperation = 'destination-in';
 g.drawImage(snap,0,0); g.restore();
 }
+g.restore();
 }
 let AC=null, master=null, padNodes=null;
 function audioInit(){
@@ -1954,7 +1958,7 @@ const REVIVE_COST = 50;
 const CAUSES = { mine:'blasted by a mine', void:'lost in the void', rock:'asteroid collision',
 laser:'sliced by a laser', hole:'swallowed by a black hole', meteor:'hit by a meteor',
 turret:'shot down by a turret', bolt:'hit by turret fire',
-boss:'crushed by the Titan', wave:'caught by a gravity wave', trap:'snagged by the orbital trap' };
+boss:'crushed by the boss', wave:'caught by a gravity wave', trap:'snagged by the orbital trap' };
 function die(cause){
 if(state!=='playing') return;
 if(godMode){
@@ -1969,10 +1973,11 @@ burst(player.x, player.y, 10, '#ffd23e', 180);
 player.inv = Math.max(player.inv, 1.0);
 return;
 }
-if(hasRelic('feather') && !phoenixUsed && player.inv<=0){
+if(hasRelic('feather') && !phoenixUsed){
 phoenixUsed = true;
 player.inv = 2.2;
-player.vy = Math.min(player.vy, -150);
+if(cause==='void' || player.y > camY + H){ player.orbit = null; player.y = camY + H*0.3; player.vx *= 0.5; player.vy = -300; }
+else { player.vy = Math.min(player.vy, -150); escapeBoss(); }
 burst(player.x, player.y, 30, '#ff9d3c', 300);
 parts.push({ x:player.x, y:player.y, vx:0, vy:0, life:.5, max:.5, r:14, c:'#ff9d3c', kind:'ring' });
 floatTxt(player.x, player.y-30, 'PHOENIX FEATHER', '#ff9d3c', 15);
@@ -1993,8 +1998,9 @@ const score = Math.floor(depthMax) + crystalScore;
 const earned = runStats.crystalRun - crystalBanked;
 crystalBanked = runStats.crystalRun;
 save.crystals += earned;
-const isBest = score > save.best;
-if(isBest){ save.best = score; cgHappy(); }
+const isBest = score > (bestBefore||0);
+if(score > save.best) save.best = score;
+if(isBest) cgHappy();
 persist();
 setTimeout(()=>{
 if(state!=='dead') return;
@@ -2016,6 +2022,23 @@ $('hud').classList.add('hidden');
 $('pulseBtn').classList.remove('ready');
 tut(0);
 }, 650);
+}
+function escapeBoss(){
+const B = boss;
+if(!B || B.dead || !player) return;
+if(Math.hypot(dxw(player.x,B.x), player.y-B.y) < B.r + 90){
+player.orbit = null;
+player.y = Math.min(camY + H*0.75, B.y + B.r + 90);
+player.vx = 0; player.vy = 60;
+}
+}
+function bankRun(){
+if(!player || !(state==='playing' || state==='paused')) return;
+const earned = runStats.crystalRun - crystalBanked;
+if(earned > 0){ crystalBanked = runStats.crystalRun; save.crystals += earned; }
+const sc = Math.floor(depthMax) + crystalScore;
+if(sc > save.best) save.best = sc;
+persist();
 }
 function doRevive(){
 if(state!=='dead' || reviveUsed) return;
@@ -2040,7 +2063,10 @@ return Math.hypot(dxw(mx,player.x), my-player.y) > R;
 rocks = rocks.filter(rk=> Math.hypot(dxw(rk.x,player.x), rk.y-player.y) > R);
 bolts = bolts.filter(bo=> Math.hypot(dxw(bo.x,player.x), bo.y-player.y) > R);
 turrets = turrets.filter(T=> Math.hypot(dxw(T.x,player.x), T.y-player.y) > R);
+holes = holes.filter(h=> Math.hypot(dxw(h.x,player.x), h.y-player.y) > R);
+lasers = lasers.filter(L=> Math.abs(L.y-player.y) > 200);
 meteors = [];
+escapeBoss();
 bossWaves=[]; if(trap){ trap=null; }
 if(evt.id) endEvent();
 evtNext = Math.max(evtNext, 10);
@@ -2205,21 +2231,27 @@ setTab('packs'); tryOpen('std', true);
 $('btnReviveAd').onclick = ()=>{
 ADS.showRewarded(()=> doRevive(), ()=> toast('AD UNAVAILABLE'));
 };
+let missPersistAt = 0;
 function checkMissions(){
-let ch = false;
+let ch = false, dirty = false;
 for(let i=0;i<save.missions.length;i++){
 const m = save.missions[i];
+if(m.born === save.games) continue;
 const M = MISSIONS.find(x=>x.id===m.id);
 const v = runStats[M.key] || 0;
-if(v > m.best){ m.best = Math.min(v, m.n); ch = true; }
+if(v > m.best){ m.best = Math.min(v, m.n); dirty = true; }
 if(v >= m.n){
 save.crystals += M.rw; ch = true;
 toast('MISSION COMPLETE · +'+M.rw);
 sfxBuy();
-save.missions[i] = genMission(save.missions.filter(x=>x!==m).map(x=>x.id));
+save.missions[i] = genMission(save.missions.map(x=>x.id));
 }
 }
-if(ch){ persist(); if(state==='menu') refreshMissions(); }
+const now = performance.now();
+if(ch || (dirty && now - missPersistAt > 3000)){
+missPersistAt = now; persist();
+if(state==='menu') refreshMissions();
+}
 }
 const elScore=$('score'),elDepth=$('depth'), elCombo=$('combo'),elPulse=$('pulseBar'),
 elPulseI=elPulse.querySelector('i'), elCrys=$('crys'),elZone=$('zoneTag');
@@ -2332,8 +2364,11 @@ if(e.code==='KeyR' && (state==='dead'||state==='playing')) startGame();
 if(e.code==='Escape' || e.code==='KeyP'){ if(state==='playing'||state==='paused') togglePause(); }
 });
 document.addEventListener('visibilitychange', ()=>{
-if(document.hidden && state==='playing') togglePause();
-if(!document.hidden && AC && AC.state==='suspended'){ try{ AC.resume(); }catch(e){} }
+if(document.hidden){
+bankRun();
+if(state==='playing') togglePause();
+if(AC && AC.state==='running'){ try{ AC.suspend(); }catch(e){} }
+} else if(AC && AC.state==='suspended'){ try{ AC.resume(); }catch(e){} }
 });
 function update(dt){
 const ts = slow>0 ? 0.35 : 1;
@@ -2361,7 +2396,7 @@ const np = nearestPlanet(pl.x, pl.y, 150);
 if(np){
 const dx = dxw(pl.x, np.x), dy = pl.y-np.y;
 const dd = Math.hypot(dx,dy)||1;
-const f = (evtRush?125:70)*(1 - dd/(evtRush?230:150));
+const f = (evtRush?125:70)*Math.max(0, 1 - dd/(evtRush?230:150));
 pl.vx -= dx/dd*f*d; pl.vy -= dy/dd*f*d;
 }
 const hpMul = hasRelic('voidanchor') ? 0.7 : 1;
@@ -4022,7 +4057,11 @@ $('tabBtnPlanets').onclick= ()=>setTab('planets');
 $('tabBtnPacks').onclick  = ()=>setTab('packs');
 $('tabBtnMiss').onclick   = ()=>setTab('missions');
 function showMenu(){
+bankRun();
 state='menu';
+skinIdx  = Math.max(0, SKINS.findIndex(s=>s.id===save.skin));
+pIdx     = Math.max(0, PTHEMES.findIndex(t=>t.id===save.pskin));
+styleIdx = Math.max(0, STYLES.findIndex(s=>s.id===save.style));
 cgStop();
 $('menu').classList.remove('hidden');
 $('death').classList.add('hidden');
@@ -4167,6 +4206,7 @@ toast('PLANET STYLE UNLOCKED');
 };
 function startGame(){
 audioInit();
+bankRun();
 save.games++;
 try{ if(IS_APP && screen.orientation && screen.orientation.lock) screen.orientation.lock('portrait').catch(()=>{}); }catch(e){}
 $('menu').classList.add('hidden');
@@ -4234,7 +4274,7 @@ if(state==='paused' || state==='dead'){ showMenu(); return; }
 const now = performance.now();
 if(now - lastBack < 1600){
 try{ history.go(-2); }catch(e){}
-try{ if(window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.app) Capacitor.Plugins.app.exitApp(); }catch(e){}
+try{ const CapApp = window.Capacitor && Capacitor.Plugins && (Capacitor.Plugins.App || Capacitor.Plugins.app); if(CapApp) CapApp.exitApp(); }catch(e){}
 } else {
 lastBack = now;
 toast('PRESS BACK AGAIN TO EXIT');
@@ -4270,8 +4310,9 @@ const dtRaw = Math.max(0.001, (t-lastT)/1000);
 const dt = Math.min(0.033, dtRaw);
 lastT = t; frameN++;
 if(!degraded && perf > 4){
-fpsEMA = lerp(fpsEMA, 1/dtRaw, 0.06);
-if(fpsEMA < 37) fpsBadT += dtRaw; else fpsBadT = Math.max(0, fpsBadT - dtRaw*1.5);
+const dtM = Math.min(dtRaw, 0.1);
+fpsEMA = lerp(fpsEMA, 1/dtM, 0.06);
+if(fpsEMA < 37) fpsBadT += dtM; else fpsBadT = Math.max(0, fpsBadT - dtM*1.5);
 if(fpsBadT > 2.5){ degraded = true; HQ = false; resize(); toast('PERFORMANCE MODE'); }
 }
 if(state==='menu'){
