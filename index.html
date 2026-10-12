@@ -549,11 +549,11 @@ document.head.appendChild(sdkS);
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
 const gWrap = document.getElementById('gameWrap');
 let W = 0, H = 0, DPR = 1, vign = null;
-const LOW_FX = ((navigator.deviceMemory || 8) <= 2) || ((navigator.hardwareConcurrency || 8) <= 3);
+const LOW_FX = ((navigator.deviceMemory || 4) <= 4) || ((navigator.hardwareConcurrency || 4) <= 4) || !!(navigator.connection && navigator.connection.saveData) || matchMedia('(prefers-reduced-motion: reduce)').matches;
 let HQ = !LOW_FX;
 let degraded = false;
 let fpsEMA = 60, fpsBadT = 0, frameN = 0;
-const PART_CAP = ()=> degraded ? 180 : (LOW_FX ? 280 : 520);
+const PART_CAP = ()=> degraded ? 120 : (LOW_FX ? 180 : 420);
 function capParts(){ const c = PART_CAP(); if(parts.length > c) parts.splice(0, parts.length - c); }
 function buildVign(){
 vign = document.createElement('canvas');
@@ -597,7 +597,7 @@ if(Array.isArray(demo.trail)) demo.trail.forEach(rem);
 }
 function resize(){
 const oldW = W;
-DPR = Math.min(devicePixelRatio || 1, degraded ? 1 : (LOW_FX ? 1.5 : 2));
+DPR = Math.min(devicePixelRatio || 1, (degraded || LOW_FX) ? 1 : 1.5);
 W = Math.max(1, gWrap.clientWidth);
 H = Math.max(1, gWrap.clientHeight);
 cv.width = W * DPR; cv.height = H * DPR;
@@ -2145,7 +2145,7 @@ if(e.target===$('confirmReset')) $('confirmReset').classList.add('hidden');
 let calInfo = null, calTimer = null;
 function pendingDailyInfo(){
 const now = new Date();
-const yest = new Date(now.getTime() - 86400000).toDateString();
+const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toDateString();
 const streak = (save.lastDaily === yest) ? (save.streak||0) + 1 : 1;
 const idx = (streak-1) % 7;
 return { streak, idx, reward: DAILY_CAL[idx], claimedNow:false };
@@ -2305,7 +2305,7 @@ startGame();
 }
 });
 addEventListener('pointerup', e=>{
-if(e.target && e.target.closest && e.target.closest('#pulseBtn,.hud-right')) return;
+if(e.target && e.target.closest && e.target.closest('#pulseBtn,.hud-right,#btnSound,#btnPause')) return;
 if(state==='playing' && player && player.orbit) launch();
 });
 addEventListener('pointercancel', ()=>{ if(state==='playing' && player && player.orbit) launch(); });
@@ -2315,9 +2315,11 @@ addEventListener('dblclick', e=>e.preventDefault());
 $('death').addEventListener('pointerdown', e=>{
 if(IS_TOUCH && e.target===$('death') && state==='dead' && perf-deadAt>0.8) startGame();
 });
+const DEV_CHEATS = false;
 const CHEAT_LEN = 10000;
 let cheatStep = 0;
 function grantCheat(){
+if(!DEV_CHEATS) return;
 save.crystals += CHEAT_LEN;
 persist();
 if(state==='menu') refreshMenu();
@@ -2325,6 +2327,7 @@ toast('CHEAT · +'+CHEAT_LEN+' CRYSTALS');
 sfxBuy(); vib(40);
 }
 function toggleGod(){
+if(!DEV_CHEATS) return;
 godMode = !godMode;
 $('chipGod').style.display = godMode ? 'flex' : 'none';
 toast(godMode ? 'GOD MODE ON' : 'GOD MODE OFF');
@@ -2333,6 +2336,7 @@ vib(40);
 }
 addEventListener('keydown', e=>{
 if(e.repeat) return;
+if(DEV_CHEATS){
 if(e.code==='KeyA') cheatStep = 1;
 else if(e.code==='KeyL' && cheatStep===1) cheatStep = 2;
 else if(e.code==='KeyL' && cheatStep===2){ cheatStep = 0; grantCheat(); }
@@ -2344,6 +2348,7 @@ else if(e.code==='KeyT') godSeq=1;
 else godSeq=0;
 if(e.code==='KeyG' && state==='playing'){ startEvent(EVENTS[(Math.random()*EVENTS.length)|0].id); }
 if(e.code==='KeyB' && state==='playing' && !boss && bossWarn<=0){ bossWarn = 0.4; bossName='TEST'; }
+}
 if(caseOpen()){
 if(e.code==='Escape' && caseRevealed) closeCase();
 return;
@@ -4254,6 +4259,7 @@ $('btnSound').onclick  = ()=>{ audioInit(); save.mute=!save.mute; persist(); syn
 $('btnSound2').onclick = ()=>{ audioInit(); save.mute=!save.mute; persist(); syncMute(); };
 let cheatTaps = 0, cheatTapT = 0;
 $('wallet').addEventListener('pointerdown', ()=>{
+if(!DEV_CHEATS) return;
 const now = performance.now();
 if(now - cheatTapT > 1200) cheatTaps = 0;
 cheatTapT = now;
@@ -4309,11 +4315,11 @@ function loop(t){
 const dtRaw = Math.max(0.001, (t-lastT)/1000);
 const dt = Math.min(0.033, dtRaw);
 lastT = t; frameN++;
-if(!degraded && perf > 4){
+if(!degraded && perf > 1){
 const dtM = Math.min(dtRaw, 0.1);
 fpsEMA = lerp(fpsEMA, 1/dtM, 0.06);
-if(fpsEMA < 37) fpsBadT += dtM; else fpsBadT = Math.max(0, fpsBadT - dtM*1.5);
-if(fpsBadT > 2.5){ degraded = true; HQ = false; resize(); toast('PERFORMANCE MODE'); }
+if(fpsEMA < 45) fpsBadT += dtM; else fpsBadT = Math.max(0, fpsBadT - dtM*1.5);
+if(fpsBadT > 1.5){ degraded = true; HQ = false; resize(); toast('PERFORMANCE MODE'); }
 }
 if(state==='menu'){
 perf += dt;
